@@ -1184,17 +1184,30 @@ Response:
 """
             try:
                 import PIL.Image
-                # Load image using PIL for Gemini Vision
-                pil_image = PIL.Image.open(file_path)
-                response = vision_model.generate_content([prompt, pil_image])
-                if response and hasattr(response, 'text') and response.text.strip():
-                    response_text = response.text.strip()
-                    print(f"Gemini Vision response: {response_text[:100]}...")  # Debug log
-                else:
-                    print("Empty or invalid response from Gemini Vision API")
+                # Check if Gemini API key is properly configured
+                if not API_KEY or API_KEY == "your_api_key_here":
+                    print("ERROR: GEMINI_API_KEY is not properly configured")
                     gemini_failed = True
+                    response_text = f'[API key not configured. Please set GEMINI_API_KEY environment variable.]\n[API key not configured. Please set GEMINI_API_KEY environment variable.]'
+                else:
+                    print(f"Using Gemini API key: {API_KEY[:20]}...")
+                    # Load image using PIL for Gemini Vision
+                    pil_image = PIL.Image.open(file_path)
+                    print(f"Image loaded successfully: {pil_image.size}")
+                    response = vision_model.generate_content([prompt, pil_image])
+                    if response and hasattr(response, 'text') and response.text.strip():
+                        response_text = response.text.strip()
+                        print(f"Gemini Vision response: {response_text[:100]}...")  # Debug log
+                    else:
+                        print("Empty or invalid response from Gemini Vision API")
+                        gemini_failed = True
+            except ImportError as ie:
+                print(f"Import error in Gemini Vision: {str(ie)}")
+                gemini_failed = True
+                response_text = f'[PIL import error: {str(ie)}]\n[PIL import error: {str(ie)}]'
             except Exception as e:
                 print(f"Error in Gemini Vision image processing: {str(e)}")
+                print(f"Error type: {type(e).__name__}")
                 gemini_failed = True
 
             # If Gemini Vision failed, use BLIP as fallback
@@ -1202,20 +1215,37 @@ Response:
                 print("Falling back to BLIP image captioning...")
                 try:
                     from PIL import Image
-                    from transformers import BlipProcessor, BlipForConditionalGeneration
-                    processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
-                    blip_model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
+                    
+                    # Use cached BLIP models
+                    processor, blip_model = get_cached_blip_models()
+                    
+                    print("Processing image with BLIP...")
                     raw_image = Image.open(file_path).convert('RGB')
                     inputs = processor(raw_image, return_tensors="pt")
                     out = blip_model.generate(**inputs)
                     caption = processor.decode(out[0], skip_special_tokens=True)
                     print(f"BLIP caption: {caption}")
+                    
                     # Now translate the caption using Gemini text model
                     translation_prompt = f"Translate the following image description into {language}, then provide the English translation on a new line.\nDescription: {caption}\n\nFormat:\n[Response in {language}]\n[English translation]\n\nResponse:"
                     response_text = get_gemini_response(translation_prompt)
+                except ImportError as ie:
+                    print(f"Import error in BLIP: {str(ie)}")
+                    # Use simple fallback
+                    simple_desc = get_simple_image_description(file_path)
+                    fallback_prompt = f"A user uploaded an image and asked: '{message}'. I can see basic image properties: {simple_desc}. Please provide a helpful response about image analysis in {language} and English translation.\n\nFormat:\n[Response in {language}]\n[English translation]\n\nResponse:"
+                    response_text = get_gemini_response(fallback_prompt)
                 except Exception as blip_e:
                     print(f"BLIP image captioning error: {blip_e}")
-                    response_text = f'[Sorry, there was an error analyzing the image. Please ensure all dependencies are installed.]\n[Sorry, there was an error analyzing the image. Please ensure all dependencies are installed.]'
+                    print(f"BLIP error type: {type(blip_e).__name__}")
+                    # Use simple fallback
+                    simple_desc = get_simple_image_description(file_path)
+                    fallback_prompt = f"A user uploaded an image and asked: '{message}'. I can see basic image properties: {simple_desc}. Please provide a helpful response about image analysis in {language} and English translation.\n\nFormat:\n[Response in {language}]\n[English translation]\n\nResponse:"
+                    try:
+                        response_text = get_gemini_response(fallback_prompt)
+                    except Exception as final_e:
+                        print(f"Final fallback error: {final_e}")
+                        response_text = f'[Image uploaded but analysis is temporarily unavailable. Basic info: {simple_desc}]\n[Image uploaded but analysis is temporarily unavailable. Basic info: {simple_desc}]'
         else:
             # Text-only response
             prompt_text = f"You are a helpful and encouraging language tutor teaching {language}. The student's message is: '{message}'\nPlease provide a very concise response that directly addresses the student's message. Avoid unnecessary details or conversational filler unless specifically asked.\nProvide your response in the following format:\n[Response in {language}]\n[English translation]\nResponse:"
@@ -2976,6 +3006,53 @@ try:
     print("✅ Database initialized successfully")
 except Exception as e:
     print(f"⚠️ Database initialization failed: {e}")
+
+# Add model caching variables
+_blip_processor = None
+_blip_model = None
+
+def get_cached_blip_models():
+    """Load and cache BLIP models to avoid reloading on each request"""
+    global _blip_processor, _blip_model
+    
+    if _blip_processor is None or _blip_model is None:
+        try:
+            from transformers import BlipProcessor, BlipForConditionalGeneration
+            print("Loading BLIP models (this may take a moment on first use)...")
+            _blip_processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
+            _blip_model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
+            print("BLIP models loaded and cached successfully")
+        except Exception as e:
+            print(f"Error loading BLIP models: {e}")
+            raise e
+    
+    return _blip_processor, _blip_model
+
+def get_simple_image_description(file_path):
+    """Provide a simple fallback image description when all AI models fail"""
+    try:
+        from PIL import Image
+        with Image.open(file_path) as img:
+            width, height = img.size
+            format_name = img.format or "Unknown"
+            mode = img.mode
+            
+            # Basic image properties
+            description = f"This is a {format_name.lower()} image with dimensions {width}x{height} pixels in {mode} color mode."
+            
+            # Add some basic analysis
+            if width > height:
+                orientation = "landscape"
+            elif height > width:
+                orientation = "portrait"
+            else:
+                orientation = "square"
+            
+            description += f" The image has a {orientation} orientation."
+            
+            return description
+    except Exception as e:
+        return f"An image file was uploaded, but detailed analysis is currently unavailable. Error: {str(e)}"
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
