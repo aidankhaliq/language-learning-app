@@ -1,0 +1,1053 @@
+/* Base Styles */ 
+body {
+  font-family: 'Poppins', sans-serif;
+  min-height: 100vh;
+  background: linear-gradient(to right top, #74ebd5, #ACB6E5);
+  background-attachment: fixed;
+  background-size: cover;
+  color: #1a1a1a;
+  transition: background-color 0.4s ease, color 0.4s ease;
+}
+
+body.dark-mode {
+  background: linear-gradient(to right top, #0f2027, #203a43, #2c5364);
+  color: #e0e0e0;
+}
+
+body.transitioning {
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+body.login-bg {
+  background: url('../static/language_learning_chatbot_background_reg.jpg') no-repeat center center fixed !important;
+  background-size: cover !important;
+}
+
+body.register-bg {
+  background: url('../static/language_learning_chatbot_background_reg.jpg') no-repeat center center fixed !important;
+  background-size: cover !important;
+}
+
+.login-container, .register-container {
+  background: none !important;
+}
+
+/* Toggle Switch - Circular */
+.toggle-container {
+  position: fixed;
+  top: 20px;
+  right: 30px;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 10px;
+  border-radius: 50%;
+  backdrop-filter: blur(5px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  inset: 0;
+  background-color: #ccc;
+  border-radius: 34px;
+  transition: 0.4s;
+  cursor: pointer;
+}
+
+.slider:before {
+  content: "";
+  position: absolute;
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: 0.4s;
+  border-radius: 50%;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+input:checked + .slider {
+  background-color: #2196F3;
+}
+
+input:checked + .slider:before {
+  transform: translateX(26px);
+}
+
+/* Dark mode styles for toggle */
+body.dark-mode .toggle-container {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+body.dark-mode .slider {
+  background-color: #444;
+}
+
+body.dark-mode .slider:before {
+  background-color: #fff;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode input:checked + .slider {
+  background-color: #64B5F6;
+}
+
+/* Sidebar */
+.sidebar {
+  background: rgba(15, 31, 51, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 1rem 0 0 1rem;
+  padding: 2rem 1rem;
+  font-weight: 500;
+  box-shadow: 4px 0 12px rgba(0, 0, 0, 0.3);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.sidebar .nav-link {
+  color: #adb5bd;
+  margin: 0.5rem 0;
+  transition: color 0.3s ease;
+}
+
+.sidebar .nav-link:hover {
+  color: #FFD77A;
+  text-shadow: 0 0 5px #FFD77A;
+}
+
+body.dark-mode .sidebar {
+  background-color: #1f1f1f;
+}
+
+body.dark-mode .nav-link {
+  color: #ccc;
+}
+
+body.dark-mode .nav-link:hover {
+  color: #fff;
+}
+
+/* Main Content */
+.dashboard-wrapper {
+  display: flex;
+  flex-wrap: nowrap;
+  min-height: 100vh;
+}
+
+.main-content {
+  padding: 2rem;
+  background: transparent;
+  border-radius: 16px;
+}
+
+body.dark-mode .main-content {
+  background-color: rgba(40, 40, 60, 0.85);
+}
+
+/* Cards */
+.welcome-card,
+.stats-card {
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  color: inherit;
+  padding: 2rem;
+  transition: background-color 0.4s ease, color 0.4s ease;
+  border: none;
+}
+
+body.dark-mode .stats-card,
+body.dark-mode .welcome-card {
+  background-color: rgba(40, 40, 60, 0.9);
+}
+
+/* Buttons */
+.btn {
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+body.dark-mode .btn {
+  border: none;
+}
+
+body.dark-mode .btn-primary {
+  background-color: #6c5ce7 !important;
+}
+
+body.dark-mode .btn-success {
+  background-color: #00b894 !important;
+}
+
+body.dark-mode .btn-warning {
+  background-color: #fdcb6e !important;
+}
+
+body.dark-mode .btn-danger {
+  background-color: #d63031 !important;
+}
+
+/* Form Select */
+body.dark-mode .form-select {
+  background-color: #2c2c2c;
+  color: #fff;
+  border-color: #444;
+}
+
+/* Progress Bar */
+body.dark-mode .progress-bar {
+  background-color: #4caf50;
+}
+
+/* Making sure the '65% of target' text is visible */
+body.dark-mode .text-muted {
+  color: #e0e0e0 !important;
+}
+
+/* Login and Register page background */
+.login-container,
+.register-container,
+.admin-login-container {
+  width: 100vw;
+  height: 100vh;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.login-container {
+  background-image: url('/static/language_learning_chatbot_reg.png');
+}
+
+.register-container {
+  background-image: url('/static/language_learning_chatbot_reg.png');
+}
+
+.admin-login-container {
+  background-image: url('/static/llg_admin_login_background.png');
+}
+
+/* Container to center the login form */
+.form-container {
+  background-color: rgba(255, 255, 255, 0.8);
+  padding: 40px;
+  border-radius: 15px;
+  width: 300px;
+  text-align: center;
+  box-shadow: 0 5px 30px rgba(0, 0, 0, 0.1);
+  color: black;
+}
+
+/* Dark Mode Form Container */
+body.dark-mode .form-container {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+/* Title styling */
+h2 {
+  color: #FF6347;
+  font-size: 30px;
+  margin-bottom: 20px;
+}
+
+body.dark-mode h2 {
+  color: #FF6347;
+}
+
+/* Button styling */
+button {
+  width: 100%;
+  padding: 12px;
+  background-color: #FF6347;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+body.dark-mode button {
+  background-color: #FF4500;
+}
+
+button:hover {
+  background-color: #FF4500;
+}
+
+/* Link to switch between login/register */
+p {
+  margin-top: 20px;
+  color: #FF6347;
+}
+
+a {
+  text-decoration: none;
+  color: #FF4500;
+  font-weight: bold;
+}
+
+/* Error message styles */
+.error {
+  color: red;
+  font-size: 14px;
+}
+
+/* Responsive design for small screens */
+@media (max-width: 500px) {
+  .form-container {
+    width: 90%;
+    padding: 30px;
+  }
+
+  .login-container,
+  .register-container,
+  .admin-login-container {
+    padding: 10px;
+    background-position: center top;
+  }
+}
+
+/* Custom dropdown styles */
+.custom-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-btn {
+  width: 100%;
+  padding: 12px;
+  background-color: #FF6347;
+  color: white;
+  text-align: left;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.arrow {
+  float: right;
+  border: solid #333;
+  border-width: 0 3px 3px 0;
+  display: block;
+  padding: 3px;
+  margin-top: 5px;
+  transform: rotate(45deg);
+}
+
+.custom-dropdown:hover .arrow {
+  transform: rotate(-135deg);
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: white;
+  min-width: 160px;
+  box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
+  z-index: 1;
+  border-radius: 8px;
+}
+
+.custom-dropdown:hover .dropdown-content {
+  display: block;
+}
+
+.dropdown-item {
+  padding: 10px;
+  color: black;
+  text-decoration: none;
+  display: block;
+}
+
+.dropdown-item:hover {
+  background-color: #ddd;
+}
+
+.flag-img {
+  width: 20px;
+  height: 15px;
+  margin-right: 10px;
+}
+
+/* 2FA Page Styling */
+.verify-2fa-container {
+  width: 100vw;
+  height: 100vh;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.form-container {
+  background-color: rgba(255, 255, 255, 0.8);
+  padding: 40px;
+  border-radius: 15px;
+  width: 350px;
+  text-align: center;
+  box-shadow: 0 5px 30px rgba(0, 0, 0, 0.1);
+  color: black;
+}
+
+body.dark-mode .form-container {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+button {
+  width: 100%;
+  padding: 12px;
+  background-color: #FF6347;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+body.dark-mode button {
+  background-color: #FF4500;
+}
+
+button:hover {
+  background-color: #FF4500;
+}
+
+/* Button styles */
+.submit-btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    display: block;
+    width: 200px;
+    margin: 30px auto 0;
+    transition: all 0.3s ease;
+}
+
+.active-btn {
+    background: #4CAF50;
+    color: white;
+}
+
+.active-btn:hover {
+    background: #45a049;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.disabled-btn {
+    background: #cccccc;
+    color: #666666;
+    cursor: not-allowed;
+}
+
+.notification-dropdown {
+  position: absolute;
+  top: 55px;
+  left: 0;
+  background-color: #fff;
+  border-radius: 5px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  width: 300px;
+  max-height: 400px;
+  overflow-y: auto;
+  display: none;
+  z-index: 1000;
+}
+
+.notification-item {
+  padding: 8px 12px;
+  transition: background-color 0.2s;
+}
+
+.notification-item:hover {
+  background-color: #f8f9fa;
+}
+
+.notification-message {
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
+.notification-timestamp {
+  font-size: 12px;
+  color: #6c757d;
+}
+
+.notification-header {
+  background-color: #f8f9fa;
+  font-weight: 600;
+}
+
+.read-notification {
+  opacity: 0.7;
+  background-color: #f8f9fa;
+}
+
+.notification-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background-color: #e64980;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ====================== */
+/* Achievements & Activity */
+/* ====================== */
+
+.achievements-section {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+
+body.dark-mode .achievements-section {
+  background: rgba(40, 40, 60, 0.9);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  color: #FFD77A;
+}
+
+.section-header i {
+  margin-right: 0.75rem;
+  font-size: 1.5rem;
+}
+
+/* Badges Grid */
+.badges-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.badge-card {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  text-align: center;
+  transition: transform 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.badge-card.earned {
+  background: rgba(108, 92, 231, 0.2);
+  border-color: rgba(108, 92, 231, 0.3);
+}
+
+.badge-card .badge-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  color: #FFD77A;
+}
+
+.badge-card.earned .badge-icon {
+  color: #6c5ce7;
+}
+
+.badge-card .badge-name {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.badge-card .badge-desc {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+/* Activity Feed */
+.activity-feed {
+  margin-top: 2rem;
+}
+
+.activity-item {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background-color 0.3s ease;
+}
+
+.activity-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.quiz-score {
+  min-width: 60px;
+  text-align: center;
+  font-weight: bold;
+  font-size: 1.1rem;
+  margin-right: 1rem;
+}
+
+.quiz-score.passed {
+  color: #4CAF50;
+}
+
+.quiz-score.failed {
+  color: #e64980;
+}
+
+.quiz-details {
+  flex: 1;
+}
+
+.quiz-title {
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.quiz-date {
+  font-size: 0.85rem;
+  opacity: 0.7;
+}
+
+.quiz-points .points-badge {
+  background: rgba(108, 92, 231, 0.2);
+  color: #6c5ce7;
+  padding: 0.35rem 0.75rem;
+  border-radius: 50px;
+  font-size: 0.85rem;
+}
+
+/* Empty States */
+.empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.empty-state i {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+/* Progress Milestones */
+.milestone-tracker {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  margin: 2rem 0;
+  padding: 0 1rem;
+}
+
+.milestone {
+  text-align: center;
+  z-index: 2;
+  position: relative;
+  flex: 1;
+}
+
+.milestone-icon {
+  width: 50px;
+  height: 50px;
+  margin: 0 auto 10px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.5);
+  transition: all 0.3s ease;
+}
+
+.milestone.achieved .milestone-icon {
+  background: #6c5ce7;
+  color: white;
+  box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.3);
+}
+
+.milestone.current .milestone-icon {
+  background: #FFD77A;
+  color: #1a1a1a;
+  animation: pulse 2s infinite;
+}
+
+.milestone-label {
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.milestone-points {
+  font-size: 0.85rem;
+  opacity: 0.7;
+}
+
+.progress-connector {
+  position: absolute;
+  top: 25px;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  z-index: -1;
+}
+
+.milestone.achieved + .milestone .progress-connector,
+.milestone.current + .milestone .progress-connector {
+  background: linear-gradient(90deg, #6c5ce7, rgba(255, 255, 255, 0.1));
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .badges-grid {
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  }
+  
+  .milestone-tracker {
+      flex-wrap: wrap;
+      gap: 1rem;
+  }
+  
+  .milestone {
+      flex: 0 0 calc(50% - 0.5rem);
+  }
+  
+  .progress-connector {
+      display: none;
+  }
+}
+
+/* Base transition styles */
+body {
+  transition: all 0.4s ease;
+}
+
+/* Slider styles */
+.slider {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background-color: #ccc;
+  border-radius: 50%;
+  transition: all 0.4s;
+  cursor: pointer;
+}
+
+/* Progress bar styles */
+.progress-bar {
+  background-color: #4caf50;
+  transition: width 0.6s ease;
+}
+
+.badge-streak-master { background: #ff7043; }
+.badge-quiz-addict { background: #3949ab; }
+.badge-perfect-10 { background: #ffd600; color: #333; }
+
+.language-card-selector {
+  margin-bottom: 2.5rem;
+  text-align: center;
+}
+.language-label {
+  font-weight: 600;
+  font-size: 1.08rem;
+  margin-bottom: 0.7rem;
+  display: block;
+}
+.language-cards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1.2rem;
+  margin: 1.2rem 0 0.5rem 0;
+}
+.language-card {
+  background: #f7faff;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(59,89,152,0.07);
+  border: 2px solid transparent;
+  min-width: 90px;
+  max-width: 120px;
+  padding: 1.1rem 0.7rem 0.7rem 0.7rem;
+  cursor: pointer;
+  text-align: center;
+  transition: border 0.2s, box-shadow 0.2s, background 0.2s;
+  font-size: 1.08rem;
+  user-select: none;
+}
+.language-card.selected, .language-card:hover {
+  border: 2px solid #3b5998;
+  background: #eaf1fb;
+  box-shadow: 0 4px 16px rgba(59,89,152,0.13);
+}
+.lang-code {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #3b5998;
+  margin-bottom: 0.2rem;
+}
+.lang-name {
+  font-size: 1.02rem;
+  color: #222;
+}
+
+.challenge-section {
+  margin-bottom: 2.2rem;
+}
+.challenge-label {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 1.1rem;
+  display: block;
+  text-align: center;
+  font-size: 1.08rem;
+}
+.challenge-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+}
+.row-cards {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+@media (max-width: 900px) {
+  .row-cards {
+    flex-direction: column;
+    gap: 1.2rem;
+    align-items: center;
+  }
+}
+.challenge-card {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: none;
+  border: 2px solid #e0e0e0;
+  padding: 1.5rem 1.2rem 1.2rem 1.2rem;
+  min-width: 220px;
+  max-width: 300px;
+  margin-bottom: 0;
+  text-align: center;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: border 0.2s, box-shadow 0.2s, background 0.2s;
+}
+.challenge-card.selected, .challenge-card:hover {
+  border: 2px solid #3b5998;
+  background: #f7faff;
+  box-shadow: 0 4px 16px rgba(59,89,152,0.13);
+}
+.checkmark {
+  color: #43a047;
+  font-weight: bold;
+  margin-right: 0.5em;
+  font-size: 1.1em;
+}
+.start-btn {
+  background: #3b5998;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.7rem 1.5rem;
+  font-size: 1.08rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: auto;
+  transition: background 0.2s;
+  box-shadow: none;
+}
+.start-btn:hover {
+  background: #29487d;
+}
+
+.progress-impact-card {
+  background: #f7faff;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(59,89,152,0.07);
+  padding: 1.2rem 1.5rem 1.2rem 1.5rem;
+  margin-top: 2.2rem;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: left;
+}
+.progress-impact-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #3b5998;
+  margin-bottom: 0.7rem;
+}
+.progress-impact-list {
+  font-size: 1rem;
+  color: #222;
+  margin-bottom: 0.7rem;
+  padding-left: 1.2rem;
+}
+.progress-impact-list li {
+  margin-bottom: 0.2rem;
+  list-style: disc;
+}
+.current-points {
+  font-size: 1.02rem;
+  color: #3b5998;
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .language-cards, .challenge-cards {
+    flex-direction: column;
+    gap: 1.2rem;
+    align-items: center;
+  }
+  .language-card, .challenge-card {
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+  }
+  .progress-impact-card {
+    padding: 1rem 0.5rem;
+  }
+}
+
+/* Milestone Progress Bar Gradient (Image 2 style) */
+.milestone-bar-gradient {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  width: 100%;
+  height: 16px;
+  background: linear-gradient(90deg, #2196f3 0%, #43e97b 50%, #f9d423 100%);
+  border-radius: 8px;
+  margin-bottom: 38px;
+  margin-top: 32px;
+}
+.milestone-bar-gradient .milestone-step {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 33.33%;
+  z-index: 2;
+}
+.milestone-bar-gradient .milestone-step:nth-child(1) { left: 0%; }
+.milestone-bar-gradient .milestone-step:nth-child(2) { left: 50%; transform: translate(-50%, -50%); }
+.milestone-bar-gradient .milestone-step:nth-child(3) { right: 0%; }
+.milestone-bar-gradient .milestone-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #fff;
+  border: 4px solid #bbb;
+  color: #bbb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  transition: border 0.3s, color 0.3s, background 0.3s;
+}
+.milestone-bar-gradient .milestone-step.achieved .milestone-circle {
+  border-color: #43e97b;
+  color: #43e97b;
+  background: #e6fff3;
+}
+.milestone-bar-gradient .milestone-step.current .milestone-circle {
+  border-color: #2196f3;
+  color: #2196f3;
+  background: #e3f2fd;
+  box-shadow: 0 0 0 4px #2196f355;
+}
+.milestone-bar-gradient .milestone-step:last-child.achieved .milestone-circle {
+  border-color: #f9d423;
+  color: #f9d423;
+  background: #fffbe6;
+}
+.milestone-bar-gradient .milestone-label {
+  font-weight: 600;
+  font-size: 1.1rem;
+  margin-bottom: 2px;
+  color: #222;
+  margin-top: 2px;
+}
+.milestone-bar-gradient .milestone-points {
+  font-size: 0.95rem;
+  color: #888;
+}
+.milestone-bar-gradient .milestone-range {
+  font-size: 0.9rem;
+  color: #bbb;
+  margin-bottom: 2px;
+}
+@media (max-width: 700px) {
+  .milestone-bar-gradient .milestone-circle { width: 36px; height: 36px; font-size: 1.1rem; }
+}
+/* Remove old milestone-bar and milestone-step CSS if present */
+.milestone-bar, .milestone-bar-container, .milestone-step, .milestone-circle { all: unset; }

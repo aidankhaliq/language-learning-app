@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Language Progress</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}">
+    <style>
+        /* Root variables */
+        :root {
+            --beginner: #8BC34A;
+            --intermediate: #2196F3;
+            --advanced: #FFC107;
+            --success: #28a745;
+            --danger: #dc3545;
+            --primary: #4361ee;
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --text-color: #343a40;
+            --muted-color: #6c757d;
+            --progress-bg: #e9ecef;
+        }
+
+        .level-tracker {
+            display: flex;
+            justify-content: space-between;
+            margin: 3rem 0;
+            position: relative;
+            --progress-width: 0%;
+        }
+
+        .level-tracker::before {
+            content: '';
+            position: absolute;
+            top: 35px;
+            left: 0;
+            right: 0;
+            height: 10px;
+            background: linear-gradient(to right, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.3));
+            z-index: 0;
+            border-radius: 20px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .level-tracker::after {
+            content: '';
+            position: absolute;
+            top: 35px;
+            left: 0;
+            height: 10px;
+            background: linear-gradient(90deg, 
+                var(--beginner) 0%, 
+                var(--intermediate) 33%, 
+                var(--advanced) 100%
+            );
+            z-index: 0;
+            border-radius: 20px;
+            width: var(--progress-width);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .points-indicator {
+            display: none;
+        }
+
+        .current-points {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+            text-align: right;
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            float: right;
+        }
+
+        .current-points i {
+            color: #3498db;
+            margin-right: 0.5rem;
+        }
+
+        /* Custom badge styles for level indicators */
+        .badge {
+            position: relative;
+        }
+
+        .level-header-badge {
+            font-weight: 700;
+            font-size: 1.1rem;
+            letter-spacing: 0.5px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border: none;
+        }
+
+        .level-header-badge.bg-beginner {
+            background-color: #8BC34A !important;
+            color: white !important;
+        }
+        
+        .level-header-badge.bg-intermediate {
+            background-color: #2196F3 !important;
+            color: white !important;
+        }
+        
+        .level-header-badge.bg-advanced {
+            background-color: #FFC107 !important;
+            color: #333 !important;
+        }
+
+        /* Remove any pseudo-elements that might add content */
+        .level-header-badge::before,
+        .level-header-badge::after {
+            display: none;
+        }
+
+        .level-badge {
+            font-weight: 700 !important;
+            font-size: 1.1rem !important;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+            border: 2px solid rgba(255, 255, 255, 0.7);
+            padding: 8px 16px !important;
+            border-radius: 8px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .level-badge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .bg-beginner {
+            background-color: #8BC34A !important;
+            color: white !important;
+        }
+
+        .bg-intermediate {
+            background-color: #2196F3 !important;
+            color: white !important;
+        }
+
+        .bg-advanced {
+            background-color: #FFC107 !important;
+            color: #333 !important;
+        }
+
+        body.dark-mode {
+            --card-bg: rgba(40, 40, 60, 0.95);
+            --text-color: #f8f9fa;
+            --muted-color: #adb5bd;
+            --progress-bg: #2c2c2c;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: var(--text-color);
+            min-height: 100vh;
+            padding-bottom: 2rem;
+        }
+
+        body.dark-mode {
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+        }
+
+        .container {
+            max-width: 1200px;
+        }
+
+        .language-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2.5rem;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: none;
+        }
+
+        .language-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+        }
+
+        .language-header {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .language-header i {
+            font-size: 2.5rem;
+            color: var(--primary);
+        }
+
+        .language-header h2 {
+            font-weight: 700;
+            margin-bottom: 0;
+        }
+
+        .level-tracker {
+            --progress-width: 0%;
+        }
+
+        .level-tracker.show-progress::after {
+            width: var(--progress-width);
+        }
+
+        .level {
+            text-align: center;
+            z-index: 3;
+            position: relative;
+            opacity: 0.7;
+            transition: all 0.3s ease;
+            flex: 1;
+        }
+
+        .level.active {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        .level-icon {
+            width: 50px;
+            height: 50px;
+            background: var(--card-bg);
+            border: 4px solid var(--progress-bg);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            position: relative;
+            z-index: 4;
+            margin-bottom: 25px;
+        }
+
+        .level.active .level-icon {
+            transform: scale(1.1);
+        }
+
+        .level.beginner .level-icon {
+            border-color: var(--beginner);
+            color: var(--beginner);
+            background-color: white;
+        }
+
+        .level.intermediate .level-icon {
+            border-color: var(--intermediate);
+            color: var(--intermediate);
+            background-color: white;
+        }
+
+        .level.advanced .level-icon {
+            border-color: var(--advanced);
+            color: var(--advanced);
+            background-color: white;
+        }
+
+        .level h5 {
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background-color: var(--card-bg);
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            display: inline-block;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            color: var(--text-color);
+        }
+
+        .level small {
+            font-size: 0.85rem;
+            color: var(--muted-color);
+            background-color: var(--card-bg);
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            display: inline-block;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .badges-section {
+            margin: 3rem 0 2rem;
+        }
+
+        .badges-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 1.25rem;
+            margin-top: 1.5rem;
+        }
+
+        .badge {
+            text-align: center;
+            padding: 1.25rem 0.75rem;
+            border-radius: 12px;
+            background: #e9ecef;
+            filter: grayscale(100%);
+            opacity: 0.85;
+            transition: all 0.3s ease;
+            border: 2px solid #d3d3d3;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .badge:not(.level-badge)::before {
+            content: "Locked";
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(220, 53, 69, 0.8);
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge.earned {
+            filter: grayscale(0);
+            opacity: 1;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            border-color: var(--primary);
+            background: white;
+        }
+
+        .badge.earned::before {
+            content: "Earned";
+            background-color: rgba(40, 167, 69, 0.8);
+        }
+
+        .badge i {
+            font-size: 1.75rem;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: #e2e2e2;
+            color: #6c757d;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .badge.earned i {
+            color: white;
+            background-color: var(--primary);
+            box-shadow: 0 3px 10px rgba(67, 97, 238, 0.3);
+        }
+
+        .badge span {
+            font-weight: 700;
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+            line-height: 1.2;
+            color: #343a40;
+            text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+        }
+
+        .badge.earned span {
+            color: #212529;
+        }
+
+        .badge small {
+            font-size: 0.8rem;
+            color: #495057;
+            line-height: 1.3;
+            display: block;
+            width: 100%;
+            word-wrap: break-word;
+            font-weight: 500;
+        }
+
+        .badge.earned small {
+            color: #495057;
+        }
+
+        body.dark-mode .badge {
+            background: #2c2c2c;
+            border-color: #444;
+        }
+
+        body.dark-mode .badge.earned {
+            background: #343a40;
+            border-color: var(--primary);
+        }
+
+        body.dark-mode .badge span {
+            color: #e9ecef;
+            text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+        }
+
+        body.dark-mode .badge.earned span {
+            color: #f8f9fa;
+        }
+
+        body.dark-mode .badge small {
+            color: #adb5bd;
+        }
+
+        body.dark-mode .badge.earned small {
+            color: #ced4da;
+        }
+
+        body.dark-mode .badge i {
+            background-color: #444;
+            color: #adb5bd;
+        }
+
+        body.dark-mode .badge.earned i {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .activity-feed {
+            margin-top: 2.5rem;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            transition: background-color 0.3s ease;
+        }
+
+        body.dark-mode .activity-item {
+            border-bottom-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .activity-item:hover {
+            background-color: rgba(0, 0, 0, 0.02);
+        }
+
+        body.dark-mode .activity-item:hover {
+            background-color: rgba(255, 255, 255, 0.03);
+        }
+
+        .quiz-result {
+            width: 70px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-right: 1.25rem;
+        }
+
+        .quiz-result.passed {
+            color: var(--success);
+        }
+
+        .quiz-result.failed {
+            color: var(--danger);
+        }
+
+        .quiz-details {
+            flex-grow: 1;
+        }
+
+        .quiz-details p {
+            margin-bottom: 0.25rem;
+            font-weight: 500;
+        }
+
+        .quiz-details small {
+            color: var(--muted-color);
+            font-size: 0.85rem;
+        }
+
+        .points-badge {
+            background: rgba(67, 97, 238, 0.1);
+            color: var(--primary);
+            padding: 0.4rem 0.8rem;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .progress-container {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 3rem;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .progress-bar {
+            height: 12px;
+            background: var(--progress-bg);
+            border-radius: 6px;
+            overflow: hidden;
+            margin-top: 1rem;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 6px;
+            background: linear-gradient(90deg, var(--beginner), var(--intermediate), var(--advanced));
+            transition: width 0.7s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        .tooltip-icon {
+            cursor: help;
+            color: var(--muted-color);
+            margin-left: 0.4rem;
+            transition: color 0.2s ease;
+        }
+
+        .tooltip-icon:hover {
+            color: var(--primary);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: var(--muted-color);
+        }
+
+        .empty-state i {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        h1, h2, h3 {
+            font-weight: 700;
+        }
+
+        h1 {
+            margin-bottom: 2rem;
+        }
+
+        h3 {
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .streak-display {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255, 193, 7, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            margin-top: 1rem;
+        }
+
+        .streak-display i {
+            color: #ffc107;
+        }
+
+        .streak-count {
+            font-weight: 600;
+            color: #ffc107;
+        }
+
+        .bonus-info {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .bonus-chip {
+            background: rgba(25, 135, 84, 0.1);
+            color: #198754;
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        @media (max-width: 768px) {
+            .level-tracker {
+                flex-wrap: wrap;
+                gap: 2rem;
+            }
+
+            .level {
+                flex: 0 0 calc(50% - 1rem);
+            }
+
+            .level-tracker::before {
+                display: none;
+            }
+
+            .badges-grid {
+                grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            }
+        }
+
+        @media (max-width: 576px) {
+            .badges-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .badge {
+                padding: 1rem 0.5rem;
+            }
+
+            .badge i {
+                font-size: 1.5rem;
+                margin-bottom: 0.5rem;
+            }
+        }
+
+        /* Animation for level up */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .level-up {
+            opacity: 1;
+        }
+
+        /* Progress impact section */
+        .progress-impact {
+            background: rgba(108, 117, 125, 0.1);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .progress-impact h5 {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .progress-impact ul {
+            padding-left: 1.5rem;
+        }
+
+        .progress-impact li {
+            margin-bottom: 0.5rem;
+        }
+
+        .journey-header {
+            color: #2c3e50;
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 0.5rem;
+        }
+
+        .total-header {
+            color: #2c3e50;
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            min-width: 200px;
+            text-align: center;
+            margin: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .points-card {
+            border-top: 4px solid #3498db;
+        }
+
+        .quizzes-card {
+            border-top: 4px solid #2ecc71;
+        }
+
+        .stat-card h5 {
+            color: #34495e;
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .progress-container {
+            background: #f8f9fa;
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        @keyframes pulse-next-rank {
+            0% { opacity: 0.7; }
+            50% { opacity: 1; }
+            100% { opacity: 0.7; }
+        }
+
+        .level {
+            text-align: center;
+            z-index: 3;
+            position: relative;
+            opacity: 0.7;
+            flex: 1;
+            transition: opacity 0.3s ease;
+        }
+
+        .level.active {
+            opacity: 1;
+            font-weight: bold;
+        }
+
+        .level.next-rank {
+            animation: pulse-next-rank 2s ease-in-out infinite;
+        }
+
+        .level.next-rank .level-icon {
+            border-width: 6px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .header-level-badge {
+            font-weight: 700;
+            font-size: 1.1rem;
+            letter-spacing: 0.5px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border: none;
+        }
+
+        .header-level-beginner {
+            background-color: #8BC34A !important;
+            color: white !important;
+        }
+        
+        .header-level-intermediate {
+            background-color: #2196F3 !important;
+            color: white !important;
+        }
+        
+        .header-level-advanced {
+            background-color: #FFC107 !important;
+            color: #333 !important;
+        }
+
+        /* Ensure no pseudo-elements or other styles override these */
+        .header-level-badge::before,
+        .header-level-badge::after {
+            display: none !important;
+        }
+
+        .rank-badge {
+            font-weight: 700;
+            font-size: 1.1rem;
+            letter-spacing: 0.5px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border: none;
+        }
+
+        .rank-beginner {
+            background-color: #8BC34A !important;
+            color: white !important;
+        }
+        
+        .rank-intermediate {
+            background-color: #2196F3 !important;
+            color: white !important;
+        }
+        
+        .rank-advanced {
+            background-color: #FFC107 !important;
+            color: #333 !important;
+        }
+
+        /* Override any Bootstrap or other framework styles */
+        .badge.rank-badge {
+            background-color: inherit;
+        }
+
+        .badge.rank-badge.rank-beginner {
+            background-color: #8BC34A !important;
+        }
+
+        .badge.rank-badge.rank-intermediate {
+            background-color: #2196F3 !important;
+        }
+
+        .badge.rank-badge.rank-advanced {
+            background-color: #FFC107 !important;
+        }
+
+        /* Remove any pseudo-elements */
+        .rank-badge::before,
+        .rank-badge::after {
+            display: none !important;
+        }
+
+        /* Remove old badge styles that might conflict */
+        .bg-beginner,
+        .bg-intermediate,
+        .bg-advanced,
+        .level-header-badge,
+        .header-level-badge {
+            background-color: transparent !important;
+        }
+
+        /* Ensure our new styles take precedence */
+        .badge.rank-badge {
+            background-color: inherit;
+            border: none !important;
+            text-shadow: none !important;
+        }
+
+        .badge.rank-badge.rank-beginner {
+            background-color: #8BC34A !important;
+            color: white !important;
+        }
+
+        .badge.rank-badge.rank-intermediate {
+            background-color: #2196F3 !important;
+            color: white !important;
+        }
+
+        .badge.rank-badge.rank-advanced {
+            background-color: #FFC107 !important;
+            color: #333 !important;
+        }
+    </style>
+</head>
+<body class="{{ 'dark-mode' if session.get('dark_mode') else '' }}">
+    <div class="container py-4">
+        <h1 class="mb-4"><i class="fas fa-chart-line"></i> Your Progress</h1>
+
+        {% if not progress.progress %}
+            <div class="alert alert-info">
+                No progress data yet. Complete a quiz to get started!
+            </div>
+        {% endif %}
+
+        <!-- Overall Progress Summary -->
+        <div class="progress-container">
+            <h3 class="journey-header">Your Language Journey</h3>
+            
+            <!-- Total Points Section -->
+            <div class="mb-4">
+                <h4 class="total-header">Total Points: <strong>{{ progress.total_points }}</strong></h4>
+                <div class="d-flex flex-wrap justify-content-center" style="gap: 18px 28px;">
+                    {% for language, data in progress.progress.items() %}
+                    <div class="stat-card points-card">
+                        <h5>{{ language }}</h5>
+                        <div class="stat-value">{{ data.total_points }}</div>
+                        <div class="stat-label">points</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Total Quizzes Section -->
+            <div>
+                <h4 class="total-header">Total Quizzes: <strong>{{ progress.total_quizzes }}</strong></h4>
+                <div class="d-flex flex-wrap justify-content-center" style="gap: 18px 28px;">
+                    {% for language, data in progress.progress.items() %}
+                    <div class="stat-card quizzes-card">
+                        <h5>{{ language }}</h5>
+                        <div class="stat-value">{{ data.quizzes_taken }}</div>
+                        <div class="stat-label">quizzes</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        {% for language, data in progress.progress.items() %}
+        <div class="language-card">
+            <!-- Language Header -->
+            <div class="language-header">
+                <i class="fas fa-{{ data.icon }}"></i>
+                <h2>{{ language }}</h2>
+                <div class="current-points">
+                    <i class="fas fa-star"></i>
+                    {{ data.total_points }} points
+                </div>
+                <div class="ms-auto">
+                    <span class="badge rank-badge rank-{{ data.current_level }}">
+                        {{ data.current_level|title }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Streak Display -->
+            {% if data.streak > 0 %}
+            <div class="streak-display">
+                <i class="fas fa-fire"></i>
+                <span class="streak-count">Current streak: {{ data.streak }} quizzes</span>
+                {% if data.highest_streak > 0 %}
+                <span class="ms-2">(Highest: {{ data.highest_streak }})</span>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Level Tracker -->
+            <div class="level-tracker">
+                <div class="level beginner {% if data.current_level == 'beginner' %}active{% endif %}">
+                    <div class="level-icon">1</div>
+                    <h5>Beginner</h5>
+                    <small>0-300 pts</small>
+                </div>
+
+                <div class="level intermediate {% if data.current_level == 'intermediate' %}active{% endif %}">
+                    <div class="level-icon">2</div>
+                    <h5>Intermediate</h5>
+                    <small>301-700 pts</small>
+                </div>
+
+                <div class="level advanced {% if data.current_level == 'advanced' %}active{% endif %}">
+                    <div class="level-icon">3</div>
+                    <h5>Advanced</h5>
+                    <small>701-1500 pts</small>
+                </div>
+            </div>
+
+            <!-- Next Level Progress -->
+            {% if data.next_level %}
+            <div class="mb-4">
+                <div class="d-flex justify-content-between mb-1">
+                    {% set lang_total_points = data.total_points %}
+
+                    {% if data.current_level == 'beginner' %}
+                        {% set current_level_req = 0 %}
+                        {% set next_level_req = progress.LEVEL_REQUIREMENTS['beginner']['points'] %}
+                    {% elif data.current_level == 'intermediate' %}
+                        {% set current_level_req = progress.LEVEL_REQUIREMENTS['beginner']['points'] %}
+                        {% set next_level_req = progress.LEVEL_REQUIREMENTS['intermediate']['points'] %}
+                    {% else %}
+                        {% set current_level_req = progress.LEVEL_REQUIREMENTS['intermediate']['points'] %}
+                        {% set next_level_req = progress.LEVEL_REQUIREMENTS['advanced']['points'] %}
+                    {% endif %}
+
+                    {% set points_earned_in_level = lang_total_points - current_level_req %}
+                    {% set points_needed_in_level = next_level_req - current_level_req %}
+
+                    {% if points_earned_in_level >= points_needed_in_level %}
+                        {% set progress_percentage = 100 %}
+                    {% else %}
+                        {% set progress_percentage = (points_earned_in_level / points_needed_in_level * 100)|round|int %}
+                    {% endif %}
+
+                    <!-- Points display removed as requested -->
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Progress Impact -->
+            <div class="progress-impact">
+                <h5><i class="fas fa-bullseye"></i> Progress Impact</h5>
+                <p>Completing a quiz will:</p>
+                <ul>
+                    {% if data.current_level == 'beginner' %}
+                    <li>Earn <strong>1 point per correct answer</strong></li>
+                    <li>Get <strong>5 bonus points</strong> for all correct answers</li>
+                    {% elif data.current_level == 'intermediate' %}
+                    <li>Earn <strong>3 points per correct answer</strong> on Intermediate or Advanced quizzes</li>
+                    <li>Get <strong>8 bonus points</strong> for all correct answers</li>
+                    <li><strong>No points</strong> for Beginner quizzes</li>
+                    {% elif data.current_level == 'advanced' %}
+                    <li>Earn <strong>5 points per correct answer</strong> on Advanced quizzes only</li>
+                    <li>Get <strong>10 bonus points</strong> for all correct answers</li>
+                    <li><strong>No points</strong> for Beginner or Intermediate quizzes</li>
+                    {% endif %}
+                </ul>
+            </div>
+
+            <!-- Badges Section -->
+            <div class="badges-section">
+                <h3>
+                    <i class="fas fa-award"></i> Achievements
+                    <i class="fas fa-info-circle tooltip-icon"
+                       title="Earn badges by completing quizzes and reaching milestones"></i>
+                </h3>
+                <div class="badges-grid">
+                    <div class="badge {% if 'hot_streak' in data.badges %}earned{% endif %}">
+                        <i class="fas fa-fire"></i>
+                        <span>Hot Streak</span>
+                        <small>5 correct quizzes<br>in a row</small>
+                    </div>
+                    
+                    <div class="badge {% if 'night_owl' in data.badges %}earned{% endif %}">
+                        <i class="fas fa-moon"></i>
+                        <span>Night Owl</span>
+                        <small>Complete a quiz<br>after midnight</small>
+                    </div>
+                    
+                    <div class="badge {% if 'early_bird' in data.badges %}earned{% endif %}">
+                        <i class="fas fa-sun"></i>
+                        <span>Early Bird</span>
+                        <small>Complete a quiz<br>before 7am</small>
+                    </div>
+                    
+                    <div class="badge {% if 'polyglot' in data.badges %}earned{% endif %}">
+                        <i class="fas fa-globe"></i>
+                        <span>Polyglot</span>
+                        <small>Complete quizzes in<br>all languages</small>
+                    </div>
+                    
+                    <div class="badge {% if 'comeback_kid' in data.badges %}earned{% endif %}">
+                        <i class="fas fa-redo"></i>
+                        <span>Comeback Kid</span>
+                        <small>Perfect score after<br>failing a quiz</small>
+                    </div>
+                    
+                    <div class="badge {% if 'speed_demon' in data.badges %}earned{% endif %}">
+                        <i class="fas fa-bolt"></i>
+                        <span>Speed Demon</span>
+                        <small>Finish a quiz in<br>record time</small>
+                    </div>
+                    
+                    <div class="badge {% if 'consistency_champ' in data.badges %}earned{% endif %}">
+                        <i class="fas fa-calendar-check"></i>
+                        <span>Consistency Champ</span>
+                        <small>Complete quizzes<br>5 days in a row</small>
+                    </div>
+                    
+                    <div class="badge {% if 'quick_thinker' in data.badges %}earned{% endif %}">
+                        <i class="fas fa-brain"></i>
+                        <span>Quick Thinker</span>
+                        <small>5 correct answers<br>under 10 seconds each</small>
+                    </div>
+                    
+                    <div class="badge {% if 'basic_vocab' in data.badges %}earned{% endif %}">
+                        <i class="fas fa-book"></i>
+                        <span>Basic Vocab</span>
+                        <small>300 points in<br>Beginner quizzes</small>
+                    </div>
+                    
+                    <div class="badge {% if 'language_guru' in data.badges %}earned{% endif %}">
+                        <i class="fas fa-star"></i>
+                        <span>Language Guru</span>
+                        <small>Maintain a<br>5 quiz streak</small>
+                    </div>
+                    
+                    <div class="badge {% if 'fluency_builder' in data.badges %}earned{% endif %}">
+                        <i class="fas fa-graduation-cap"></i>
+                        <span>Fluency Builder</span>
+                        <small>Complete 10<br>Advanced quizzes</small>
+                    </div>
+                    
+                    <div class="badge {% if 'master_of_language' in data.badges %}earned{% endif %}">
+                        <i class="fas fa-crown"></i>
+                        <span>Master of Language</span>
+                        <small>Reach 1500<br>total points</small>
+                    </div>
+                    
+                    <div class="badge {% if 'quiz_explorer' in data.badges %}earned{% endif %}">
+                        <i class="fas fa-compass"></i>
+                        <span>Quiz Explorer</span>
+                        <small>Take quizzes in<br>5 different languages</small>
+                    </div>
+                    
+                    <div class="badge {% if 'perfectionist' in data.badges %}earned{% endif %}">
+                        <i class="fas fa-gem"></i>
+                        <span>Perfectionist</span>
+                        <small>Get 100% in<br>3 quizzes in a row</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="activity-feed">
+                <h3><i class="fas fa-history"></i> Recent Activity</h3>
+                {% for activity in progress.recent_activity %}
+                {% if activity.language == language %}
+                <div class="activity-item">
+                    <div class="quiz-result {% if activity.passed %}passed{% else %}failed{% endif %}">
+                        {{ activity.score }}/{{ activity.total }}
+                    </div>
+                    <div class="quiz-details">
+                        <p>{{ activity.difficulty|title }} Quiz</p>
+                        <small>{{ activity.timestamp }}</small>
+                        <div class="bonus-info">
+                            {% if activity.streak_bonus > 0 %}
+                            <span class="bonus-chip">
+                                <i class="fas fa-bolt"></i> +{{ activity.streak_bonus }} streak
+                            </span>
+                            {% endif %}
+                            {% if activity.time_bonus > 0 %}
+                            <span class="bonus-chip">
+                                <i class="fas fa-stopwatch"></i> +{{ activity.time_bonus }} time
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div>
+                        <span class="points-badge">
+                            +{{ activity.points_earned }} pts
+                        </span>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+                {% if progress.recent_activity|selectattr('language', 'equalto', language)|list|length == 0 %}
+                <div class="empty-state">
+                    <i class="fas fa-clipboard-list"></i>
+                    <p>No recent activity for {{ language }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Initialize tooltips and progress bars -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl)
+            });
+
+            document.querySelectorAll('.level-tracker').forEach(function(tracker) {
+                const languageCard = tracker.closest('.language-card');
+                const pointsText = languageCard.querySelector('.current-points').textContent;
+                const currentPoints = parseInt(pointsText.match(/\d+/)[0]);
+                
+                // Define correct level thresholds
+                const THRESHOLDS = {
+                    BEGINNER: 300,    // 0-300 points
+                    INTERMEDIATE: 700, // 301-700 points
+                    ADVANCED: 1500    // 701-1500 points
+                };
+                
+                // Determine current level based on points
+                let currentLevel;
+                if (currentPoints <= THRESHOLDS.BEGINNER) {
+                    currentLevel = 'beginner';
+                } else if (currentPoints <= THRESHOLDS.INTERMEDIATE) {
+                    currentLevel = 'intermediate';
+                } else {
+                    currentLevel = 'advanced';
+                }
+                
+                // Calculate progress width (in thirds - 33.33% each section)
+                let progressWidth;
+                if (currentPoints <= THRESHOLDS.BEGINNER) {
+                    progressWidth = (currentPoints / THRESHOLDS.BEGINNER) * 33.33;
+                } else if (currentPoints <= THRESHOLDS.INTERMEDIATE) {
+                    progressWidth = 33.33 + ((currentPoints - THRESHOLDS.BEGINNER) / (THRESHOLDS.INTERMEDIATE - THRESHOLDS.BEGINNER)) * 33.33;
+                } else {
+                    progressWidth = 66.66 + ((currentPoints - THRESHOLDS.INTERMEDIATE) / (THRESHOLDS.ADVANCED - THRESHOLDS.INTERMEDIATE)) * 33.34;
+                    progressWidth = Math.min(progressWidth, 100);
+                }
+                
+                // Set the progress width
+                tracker.style.setProperty('--progress-width', `${progressWidth}%`);
+                
+                // Update next rank animation
+                tracker.querySelectorAll('.level').forEach(level => {
+                    level.classList.remove('next-rank', 'active');
+                });
+                
+                // Add active class to current level
+                const currentLevelElement = tracker.querySelector(`.level.${currentLevel}`);
+                if (currentLevelElement) {
+                    currentLevelElement.classList.add('active');
+                }
+                
+                // Add next-rank class to next level
+                const levels = ['beginner', 'intermediate', 'advanced'];
+                const currentIndex = levels.indexOf(currentLevel);
+                if (currentIndex < levels.length - 1) {
+                    const nextRankClass = levels[currentIndex + 1];
+                    const nextRank = tracker.querySelector(`.level.${nextRankClass}`);
+                    if (nextRank) {
+                        nextRank.classList.add('next-rank');
+                    }
+                }
+            });
+
+            // Check if we should show a level up celebration
+            const urlParams = new URLSearchParams(window.location.search);
+            if(urlParams.has('levelup')) {
+                const levelUpElement = document.querySelector('.level-up');
+                if(levelUpElement) {
+                    levelUpElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        });
+    </script>
+</body>
+</html>

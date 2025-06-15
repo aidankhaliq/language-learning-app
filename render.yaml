@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: language-learning-chatbot
+    env: python
+    buildCommand: |
+      pip install -r requirements.txt
+      python scripts/init_db.py
+    startCommand: gunicorn app:app --workers 2 --threads 4 --timeout 300 --bind 0.0.0.0:$PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.11
+      - key: FLASK_SECRET_KEY
+        generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: SMTP_SERVER
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: 465
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: USE_CONSOLE_OTP
+        value: true
+      - key: FLASK_ENV
+        value: production
+      - key: FLASK_APP
+        value: app.py
+      - key: PORT
+        value: 10000
+    healthCheckPath: /
+    autoDeploy: true
+    plan: starter
+    disk:
+      name: sqlite-data
+      mountPath: /data
+      sizeGB: 1 

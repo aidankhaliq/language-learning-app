@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .admin-section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .user-row:hover {
+            background-color: #f8f9fa;
+        }
+        .alert {
+            animation: fadeOut 5s forwards;
+            animation-delay: 3s;
+        }
+        @keyframes fadeOut {
+            from {opacity: 1;}
+            to {opacity: 0; display: none;}
+        }
+        .alert-success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        .question-card {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            padding: 15px;
+            background-color: #f8f9fa;
+        }
+        .question-card:hover {
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .question-options {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+        .correct-answer {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .delete-question {
+            float: right;
+            color: #dc3545;
+            cursor: pointer;
+        }
+        .delete-question:hover {
+            color: #c82333;
+        }
+        .language-section {
+            margin-bottom: 20px;
+        }
+        .difficulty-section {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">Admin Dashboard</a>
+            <a href="{{ url_for('admin_logout') }}" class="btn btn-outline-light">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container py-4">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- User Management Section -->
+        <div class="admin-section">
+            <h2 class="mb-4"><i class="fas fa-users"></i> User Management</h2>
+            <div class="table-responsive">
+                <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Admin Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                        <tr class="user-row">
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.email }}</td>
+                            <td>
+                                {% if user.is_admin %}
+                                    <span class="badge bg-primary">Admin</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">User</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <button class="btn btn-warning btn-sm reset-progress" data-user-id="{{ user.id }}">
+                                        Reset Progress
+                                    </button>
+                                    {% if user.is_admin %}
+                                        <button class="btn btn-danger btn-sm remove-admin" data-user-id="{{ user.id }}">
+                                            Remove Admin
+                                        </button>
+                                    {% else %}
+                                        <button class="btn btn-success btn-sm make-admin" data-user-id="{{ user.id }}">
+                                            Make Admin
+                                        </button>
+                                    {% endif %}
+                                    <button class="btn btn-danger btn-sm delete-user" data-user-id="{{ user.id }}">
+                                        Delete User
+                                    </button>
+                                </div>
+                            </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+            </div>
+        </div>
+
+        <!-- View All Questions Section -->
+        <div class="admin-section">
+            <h2 class="mb-4"><i class="fas fa-list"></i> All Quiz Questions</h2>
+            
+            <div class="accordion" id="questionsAccordion">
+                {% for language in languages %}
+                <div class="accordion-item language-section">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                data-bs-target="#collapse{{ language }}" aria-expanded="false">
+                            <i class="fas fa-language me-2"></i> {{ language }}
+                        </button>
+                    </h2>
+                    <div id="collapse{{ language }}" class="accordion-collapse collapse" data-bs-parent="#questionsAccordion">
+                        <div class="accordion-body">
+                            {% for difficulty in ['beginner', 'intermediate', 'advanced'] %}
+                            <div class="difficulty-section">
+                                <h4>
+                                    <i class="fas fa-layer-group me-2"></i> {{ difficulty|title }}
+                                    <div class="form-check d-inline-block ms-2">
+                                        <input type="checkbox" class="form-check-input select-all-questions" 
+                                               data-language="{{ language }}"
+                                               data-difficulty="{{ difficulty }}"
+                                               id="select-all-{{ language }}-{{ difficulty }}">
+                                        <label class="form-check-label" for="select-all-{{ language }}-{{ difficulty }}">
+                                            Select All
+                                        </label>
+                                    </div>
+                                </h4>
+                                <div id="questions-{{ language }}-{{ difficulty }}" class="questions-container">
+                                    {% for question in quiz_data.get(language, {}).get(difficulty, []) %}
+                                    <div class="question-card" data-question-id="{{ question.id }}" data-question-type="{{ question.question_type }}">
+                                        <input type="checkbox" class="question-checkbox" 
+                                               data-language="{{ language }}"
+                                               data-difficulty="{{ difficulty }}"
+                                               data-question-id="{{ question.id }}"
+                                               style="margin-right: 10px;">
+                                        <i class="fas fa-times delete-question" 
+                                           data-language="{{ language }}"
+                                           data-difficulty="{{ difficulty }}"
+                                           data-question-id="{{ question.id }}"></i>
+                                        <i class="fas fa-edit edit-question ms-2" 
+                                           data-language="{{ language }}"
+                                           data-difficulty="{{ difficulty }}"
+                                           data-question-id="{{ question.id }}"
+                                           data-question="{{ question.question }}"
+                                           {% if question.question_type == 'error_spotting' or question.question_type == 'idiom_interpretation' or question.question_type == 'cultural_nuances' or question.question_type == 'word_matching' %}
+                                           data-options='{{ question.options | tojson | safe }}'
+                                           {% else %}
+                                           data-options="{{ question.options|join('\n') }}"
+                                           {% endif %}
+                                           data-answer="{{ question.answer }}"
+                                           style="float: right; cursor: pointer; color: #0d6efd; margin-right: 10px;"></i>
+                                        <strong>Question {{ loop.index }}:</strong> {{ question.question }}
+                                    </div>
+                                    {% endfor %}
+                                    {% if quiz_data.get(language, {}).get(difficulty, []) %}
+                                    <div class="bulk-actions mt-3">
+                                        <button class="btn btn-danger btn-sm delete-selected" 
+                                                data-language="{{ language }}"
+                                                data-difficulty="{{ difficulty }}">
+                                            <i class="fas fa-trash-alt"></i> Delete Selected Questions
+                                        </button>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="admin-section" style="margin-top: 2.5rem;">
+            <h3>Import Questions from Excel</h3>
+            <form action="{{ url_for('admin_import_questions') }}" method="post" enctype="multipart/form-data" style="margin-bottom: 1.5rem;">
+                <div style="display: flex; gap: 1.2rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                    <div>
+                        <label for="import-language">Language</label>
+                        <select name="language" id="import-language" required>
+                            {% for lang in languages %}
+                            <option value="{{ lang }}">{{ lang }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label for="import-difficulty">Difficulty</label>
+                        <select name="difficulty" id="import-difficulty" required>
+                            <option value="Beginner">Beginner</option>
+                            <option value="Intermediate">Intermediate</option>
+                            <option value="Advanced">Advanced</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="import-qtype">Question Type</label>
+                        <select name="question_type" id="import-qtype" required onchange="updateTemplateLink()">
+                            <option value="Multiple Choice" class="beginner-only">Multiple Choice</option>
+                            <option value="Word Matching" class="beginner-only">Word Matching</option>
+                            <option value="Fill-in-the-blanks" class="beginner-only">Fill-in-the-blanks</option>
+                            <option value="Phrase Completion" class="intermediate-only" style="display: none;">Phrase Completion</option>
+                            <option value="Error Spotting" class="intermediate-only" style="display: none;">Error Spotting</option>
+                            <option value="Context Response" class="intermediate-only" style="display: none;">Context Response</option>
+                            <option value="Idiom interpretation" class="advanced-only" style="display: none;">Idiom interpretation</option>
+                            <option value="Cultural nuances" class="advanced-only" style="display: none;">Cultural nuances</option>
+                            <option value="Complex rephrasing" class="advanced-only" style="display: none;">Complex rephrasing</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label for="excel-file">Excel File</label>
+                    <input type="file" name="excel_file" id="excel-file" accept=".xlsx,.xls" required>
+                </div>
+                <button type="submit" style="background: #3b5998; color: #fff; border: none; border-radius: 8px; padding: 0.6rem 1.5rem; font-weight: 600;">Import Questions</button>
+                <a id="download-template-btn" href="{{ url_for('download_excel_template', difficulty='Beginner') }}?question_type=Multiple%20Choice" class="btn btn-secondary" style="margin-left: 1.2rem; background: #eaf1fb; color: #3b5998; border: 1px solid #3b5998; border-radius: 8px; padding: 0.6rem 1.5rem; font-weight: 600;">Download Beginner Template</a>
+            </form>
+            <div class="excel-format-note" style="background: #f7faff; border-left: 4px solid #3b5998; padding: 1.2rem 1.5rem; border-radius: 8px;">
+                <b>Required Excel Format:</b><br>
+                <span style="font-size: 0.9em; color: #555;">Note: Column headers are not case-sensitive and are flexible with singular/plural forms during import.</span><br><br>
+                <u>Beginner Questions:</u><br>
+                <b>1. Multiple Choice Questions:</b><br>
+                Columns: <b>Question</b>, <b>Options</b>, <b>Correct Answer</b><br>
+                <i>Options are separated by a semicolon ';'</i><br><br>
+                <b>2. Word Matching Questions:</b><br>
+                Columns: <b>Question</b>, <b>Pairs</b><br>
+                <i>Pairs are in format 'word1:match1; word2:match2'</i><br><br>
+                <b>3. Fill-in-the-blanks Questions:</b><br>
+                Columns: <b>Question</b>, <b>Answer</b>, <b>Hint</b><br><br>
+                <u>Intermediate Questions:</u><br>
+                <b>1. Phrase Completion Questions:</b><br>
+                Columns: <b>Phrase Start</b>, <b>Options</b>, <b>Correct Completion</b><br>
+                <i>Options are separated by a semicolon ';'</i><br><br>
+                <b>2. Error Spotting Questions:</b><br>
+                Columns: <b>Question</b>, <b>Options</b>, <b>Correct Answer</b>, <b>Explanation</b><br>
+                <i>Options are separated by a semicolon ';'</i><br><br>
+                <b>3. Context Response Questions:</b><br>
+                Columns: <b>Question</b>, <b>Options</b>, <b>Correct Answer</b><br>
+                <i>Options are separated by a semicolon ';'</i><br><br>
+                <u>Advanced Questions:</u><br>
+                <b>1. Idiom interpretation Questions:</b><br>
+                Columns: <b>Question</b>, <b>Options</b>, <b>Correct Answer</b>, <b>Explanation</b><br>
+                <i>Options are separated by a semicolon ';'</i><br><br>
+                <b>2. Cultural Nuances Questions:</b><br>
+                Columns: <b>Question</b>, <b>Options</b>, <b>Correct Answer</b>, <b>Explanation</b><br>
+                <i>Options are separated by a semicolon ';'</i><br><br>
+                <b>3. Complex Rephrasing Questions:</b><br>
+                Columns: <b>Question</b>, <b>Options</b>, <b>Correct Answer</b><br>
+                <i>Options are separated by a semicolon ';'</i>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Reset Progress
+            document.querySelectorAll('.reset-progress').forEach(button => {
+                button.addEventListener('click', function() {
+                    const userId = this.dataset.userId;
+                    const userName = this.closest('tr').querySelector('td:nth-child(2)').textContent; // Get username from table
+                    
+                    // Enhanced confirmation dialog
+                    if (confirm(`⚠️ RESET ALL PROGRESS FOR ${userName}?\n\nThis will permanently delete:\n• All quiz results and points\n• All achievements and badges\n• All chat history\n• Study list and progress\n• All notifications\n\nThis action CANNOT be undone!\n\nAre you absolutely sure?`)) {
+                        // Show loading state
+                        const originalText = this.textContent;
+                        this.textContent = 'Resetting...';
+                        this.disabled = true;
+                        
+                        fetch(`/admin/reset_progress/${userId}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Show detailed success message
+                                let detailsMessage = `✅ Successfully reset all progress for ${userName}!\n\nDeleted items:`;
+                                if (data.details) {
+                                    detailsMessage += `\n• Quiz Results: ${data.details.quiz_results_legacy + data.details.quiz_results_enhanced}`;
+                                    detailsMessage += `\n• Achievements: ${data.details.achievements}`;
+                                    detailsMessage += `\n• Badges: ${data.details.badges}`;
+                                    detailsMessage += `\n• Study List: ${data.details.study_list}`;
+                                    detailsMessage += `\n• Chat Sessions: ${data.details.chat_sessions}`;
+                                    detailsMessage += `\n• Chat Messages: ${data.details.chat_messages}`;
+                                    detailsMessage += `\n• Notifications: ${data.details.notifications}`;
+                                }
+                                alert(detailsMessage);
+                                location.reload();
+                            } else {
+                                alert(`❌ Error resetting progress: ${data.message || 'Unknown error'}`);
+                                this.textContent = originalText;
+                                this.disabled = false;
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Reset progress error:', error);
+                            alert('❌ Network error while resetting progress');
+                            this.textContent = originalText;
+                            this.disabled = false;
+                        });
+                    }
+                });
+            });
+
+            // Make Admin
+            document.querySelectorAll('.make-admin').forEach(button => {
+                button.addEventListener('click', function() {
+                    const userId = this.dataset.userId;
+                    if (confirm('Are you sure you want to make this user an admin?')) {
+                        fetch(`/admin/toggle_admin/${userId}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ make_admin: true })
+                        }).then(response => {
+                            if (response.ok) {
+                                alert('User is now an admin');
+                                location.reload();
+                            } else {
+                                alert('Error updating admin status');
+                            }
+                        });
+                    }
+                });
+            });
+
+            // Remove Admin
+            document.querySelectorAll('.remove-admin').forEach(button => {
+                button.addEventListener('click', function() {
+                    const userId = this.dataset.userId;
+                    if (confirm('Are you sure you want to remove admin privileges from this user?')) {
+                        fetch(`/admin/toggle_admin/${userId}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ make_admin: false })
+                        }).then(response => {
+                            if (response.ok) {
+                                alert('Admin privileges removed');
+                                location.reload();
+                            } else {
+                                alert('Error updating admin status');
+                            }
+                        });
+                    }
+                });
+            });
+
+            // Delete User
+            document.querySelectorAll('.delete-user').forEach(button => {
+                button.addEventListener('click', function() {
+                    const userId = this.dataset.userId;
+                    if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+                        fetch(`/admin/delete_user/${userId}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        }).then(response => {
+                            if (response.ok) {
+                                alert('User deleted successfully');
+                                location.reload();
+                            } else {
+                                alert('Error deleting user');
+                            }
+                        });
+                    }
+                });
+            });
+
+            // Add bulk delete functionality
+            document.querySelectorAll('.delete-selected').forEach(button => {
+                button.addEventListener('click', async function() {
+                    const language = this.dataset.language;
+                    const difficulty = this.dataset.difficulty;
+                    const section = this.closest('.difficulty-section');
+                    const selectedQuestions = section.querySelectorAll('.question-checkbox:checked');
+                    
+                    if (selectedQuestions.length === 0) {
+                        alert('Please select questions to delete');
+                        return;
+                    }
+                    
+                    if (!confirm(`Are you sure you want to delete ${selectedQuestions.length} selected questions?`)) {
+                        return;
+                    }
+                    
+                    const ids = Array.from(selectedQuestions).map(checkbox => parseInt(checkbox.dataset.questionId));
+                    
+                    try {
+                        const response = await fetch('/admin/delete_questions', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ ids: ids })
+                        });
+                        
+                        if (response.ok) {
+                            selectedQuestions.forEach(checkbox => {
+                                checkbox.closest('.question-card').remove();
+                            });
+                            alert('Selected questions deleted successfully');
+                            location.reload(); // Reload to ensure UI is in sync with database
+                        } else {
+                            alert('Error deleting questions');
+                        }
+                    } catch (error) {
+                        alert('Error deleting questions');
+                        console.error('Error:', error);
+                    }
+                });
+            });
+
+            // Add select all functionality
+            document.querySelectorAll('.select-all-questions').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const language = this.dataset.language;
+                    const difficulty = this.dataset.difficulty;
+                    const section = this.closest('.difficulty-section');
+                    const questionCheckboxes = section.querySelectorAll('.question-checkbox');
+                    
+                    questionCheckboxes.forEach(qCheckbox => {
+                        qCheckbox.checked = this.checked;
+                    });
+                });
+            });
+
+            // Update select all checkbox when individual checkboxes change
+            document.querySelectorAll('.question-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const language = this.dataset.language;
+                    const difficulty = this.dataset.difficulty;
+                    const section = this.closest('.difficulty-section');
+                    const selectAllCheckbox = section.querySelector('.select-all-questions');
+                    const allCheckboxes = section.querySelectorAll('.question-checkbox');
+                    const allChecked = Array.from(allCheckboxes).every(cb => cb.checked);
+                    
+                    selectAllCheckbox.checked = allChecked;
+                });
+            });
+
+            // Show/hide question types based on difficulty
+            document.getElementById('import-difficulty').addEventListener('change', function() {
+                const qtypeSelect = document.getElementById('import-qtype');
+                const beginnerOptions = qtypeSelect.querySelectorAll('.beginner-only');
+                const intermediateOptions = qtypeSelect.querySelectorAll('.intermediate-only');
+                const advancedOptions = qtypeSelect.querySelectorAll('.advanced-only');
+                
+                if (this.value === 'Intermediate') {
+                    beginnerOptions.forEach(opt => opt.style.display = 'none');
+                    intermediateOptions.forEach(opt => opt.style.display = '');
+                    advancedOptions.forEach(opt => opt.style.display = 'none');
+                    // Set default to first intermediate option
+                    qtypeSelect.value = 'Phrase Completion';
+                } else if (this.value === 'Beginner') {
+                    beginnerOptions.forEach(opt => opt.style.display = '');
+                    intermediateOptions.forEach(opt => opt.style.display = 'none');
+                    advancedOptions.forEach(opt => opt.style.display = 'none');
+                    // Set default to first beginner option
+                    qtypeSelect.value = 'Multiple Choice';
+                } else if (this.value === 'Advanced') {
+                    beginnerOptions.forEach(opt => opt.style.display = 'none');
+                    intermediateOptions.forEach(opt => opt.style.display = 'none');
+                    advancedOptions.forEach(opt => opt.style.display = '');
+                    // Set default to first advanced option
+                    qtypeSelect.value = 'Idiom interpretation';
+                }
+                updateTemplateLink();
+            });
+            
+            function updateTemplateLink() {
+                const difficulty = document.getElementById('import-difficulty').value;
+                const qtype = document.getElementById('import-qtype').value;
+                const btn = document.getElementById('download-template-btn');
+                btn.href = "{{ url_for('download_excel_template', difficulty='') }}" + difficulty + "?question_type=" + encodeURIComponent(qtype);
+                btn.textContent = 'Download ' + difficulty + ' Template';
+            }
+            document.getElementById('import-qtype').addEventListener('change', updateTemplateLink);
+
+            // Edit Question Modal
+            document.querySelectorAll('.edit-question').forEach(function(editBtn) {
+                editBtn.addEventListener('click', function() {
+                    var form = document.getElementById('editQuestionForm');
+                    const questionId = this.getAttribute('data-question-id');
+                    var question = this.getAttribute('data-question');
+                    var options = this.getAttribute('data-options');
+                    var answer = this.getAttribute('data-answer');
+                    var qtype = this.closest('.question-card').getAttribute('data-question-type');
+
+                    // Populate hidden fields
+                    document.getElementById('edit-question-id').value = questionId;
+                    document.getElementById('edit-question-type').value = qtype;
+
+                    // Parse options for different question types
+                    let explanation = '';
+                    const optionsTextarea = form.elements['options'];
+                    const explanationFieldDiv = form.querySelector('.explanation-field');
+                    const explanationTextarea = form.elements['explanation'];
+
+                    if (['error_spotting', 'idiom_interpretation', 'cultural_nuances'].includes(qtype)) {
+                        try {
+                            var optsObj = JSON.parse(options);
+                            if (Array.isArray(optsObj.options)) {
+                                options = optsObj.options.join('\n');
+                            } else if (typeof optsObj.options === 'string') {
+                                options = optsObj.options.split(';').map(s => s.trim()).join('\n');
+                            } else {
+                                options = '';
+                            }
+                            explanation = optsObj.explanation || '';
+                        } catch (e) {
+                            console.error('Error parsing options JSON:', e);
+                            options = '';
+                            explanation = '';
+                        }
+                        explanationFieldDiv.style.display = 'block';
+                        explanationTextarea.value = explanation;
+                    } else if (qtype === 'word_matching') {
+                        // Handle word matching pairs display
+                        try {
+                            var pairsObj = JSON.parse(options);
+                            if (pairsObj.pairs && Array.isArray(pairsObj.pairs)) {
+                                // Newer format: {pairs: [{key: "Dog", value: "狗 (Gǒu)"}], format: "key_value_matching"}
+                                var pairStrings = pairsObj.pairs.map(pair => 
+                                    pair.key + ':' + pair.value
+                                );
+                                options = pairStrings.join('\n');
+                            } else if (Array.isArray(pairsObj)) {
+                                // Older format: [["Dog", "狗 (Gǒu)"], ["Cat", "猫 (Māo)"]]
+                                var pairStrings = pairsObj.map(pair => 
+                                    pair[0] + ':' + pair[1]
+                                );
+                                options = pairStrings.join('\n');
+                            } else {
+                                options = 'Invalid pairs format';
+                            }
+                        } catch (e) {
+                            console.error('Error parsing word matching options:', e);
+                            options = 'Error parsing pairs';
+                        }
+                        explanationFieldDiv.style.display = 'none';
+                        explanationTextarea.value = '';
+                    } else {
+                        // For other question types, options are already a simple string or list
+                        if (Array.isArray(options)) {
+                            options = options.join('\n');
+                        } else if (typeof options === 'string') {
+                            // Assuming options might be a single string for fill-in-the-blanks hint, etc.
+                            // Or a semicolon-separated string that wasn't parsed as JSON
+                            // For robustness, if it contains semicolons and isn't JSON, treat as semicolon separated
+                            if (options.includes(';') && !options.includes('{')) {
+                                options = options.split(';').map(s => s.trim()).join('\n');
+                            } else if (options.includes('[') && options.includes(']')) {
+                                // Handle potential JSON array that wasn't caught by the first JSON.parse
+                                try {
+                                    var optsArr = JSON.parse(options);
+                                    if (Array.isArray(optsArr)) {
+                                        options = optsArr.join('\n');
+                                    }
+                                } catch (e) {}
+                            }
+                        }
+                        explanationFieldDiv.style.display = 'none';
+                        explanationTextarea.value = '';
+                    }
+
+                    var modal = new bootstrap.Modal(document.getElementById('editQuestionModal'));
+                    form.elements['question'].value = question;
+                    optionsTextarea.value = options;
+                    form.elements['correct_answer'].value = answer;
+                    // Show/hide correct answer field
+                    var answerField = form.querySelector('.correct-answer-field');
+                    if (qtype && qtype.toLowerCase().includes('word_matching')) {
+                        answerField.style.display = 'none';
+                    } else {
+                        answerField.style.display = '';
+                    }
+                    modal.show();
+                });
+            });
+
+            // Delete single question functionality
+            document.querySelectorAll('.delete-question').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    const questionId = this.getAttribute('data-question-id');
+                    if (!questionId) return;
+                    if (!confirm('Are you sure you want to delete this question?')) return;
+                    fetch('/admin/delete_questions', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ids: [parseInt(questionId)] })
+                    }).then(response => {
+                        if (response.ok) {
+                            this.closest('.question-card').remove();
+                            alert('Question deleted successfully');
+                        } else {
+                            alert('Error deleting question');
+                        }
+                    });
+                });
+            });
+
+            // Save Question Edit
+            document.getElementById('saveEditButton').addEventListener('click', async function() {
+                const form = document.getElementById('editQuestionForm');
+                const questionId = form.elements['question_id'].value;
+                const questionType = form.elements['question_type'].value;
+                const questionText = form.elements['question'].value;
+                const optionsText = form.elements['options'].value;
+                const correctAnswer = form.elements['correct_answer'].value;
+                const explanationText = form.elements['explanation'].value;
+
+                // Basic validation
+                if (!questionId || !questionType || !questionText) {
+                    alert('Please fill in all required fields.');
+                    return;
+                }
+                
+                // Check if correct answer is required for this question type
+                if (questionType !== 'word_matching' && !correctAnswer) {
+                    alert('Please fill in the correct answer.');
+                    return;
+                }
+
+                let formattedOptions = optionsText.split('\n').map(s => s.trim()).filter(s => s);
+
+                // Re-format options for question types that store them as JSON
+                if (['error_spotting', 'idiom_interpretation', 'cultural_nuances'].includes(questionType)) {
+                    formattedOptions = { options: formattedOptions, explanation: explanationText };
+                } else if (questionType === 'fill_in_the_blanks') {
+                    // Assuming fill-in-the-blanks options is just a hint string in JSON
+                    formattedOptions = { hint: optionsText.trim() }; // Assuming optionsText is the hint here
+                } else if (questionType === 'word_matching') {
+                    // Parse word matching pairs from textarea (format: key:value per line)
+                    try {
+                        var pairLines = optionsText.split('\n').map(s => s.trim()).filter(s => s);
+                        var pairs = [];
+                        
+                        for (var line of pairLines) {
+                            if (line.includes(':')) {
+                                var parts = line.split(':', 2);
+                                var key = parts[0].trim();
+                                var value = parts[1].trim();
+                                if (key && value) {
+                                    pairs.push({ key: key, value: value });
+                                }
+                            }
+                        }
+                        
+                        if (pairs.length === 0) {
+                            alert('Please enter valid pairs in the format "key:value" (one per line)');
+                            return;
+                        }
+                        
+                        // Always use the newer format for consistency
+                        formattedOptions = {
+                            pairs: pairs,
+                            format: 'key_value_matching'
+                        };
+                    } catch (e) {
+                        alert('Error parsing word matching pairs. Please use format "key:value" (one per line)');
+                        return;
+                    }
+                }
+                // For multiple_choice, phrase_completion, context_response, formattedOptions is already a list of strings
+
+                try {
+                    const response = await fetch('/admin/edit_question', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            id: parseInt(questionId),
+                            question_type: questionType,
+                            question: questionText,
+                            options: formattedOptions, // Send the potentially JSON-formatted options
+                            answer: correctAnswer,
+                            // Note: Language and Difficulty are not currently editable via this modal
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        alert('Question saved successfully!');
+                        // Optional: Update the question card in the UI without a full page reload
+                        // For simplicity, we can just reload the page for now.
+                         location.reload();
+                    } else {
+                        alert('Error saving question: ' + result.message);
+                    }
+                } catch (error) {
+                    alert('Error saving question.');
+                    console.error('Error:', error);
+                }
+            });
+
+            // Adjust modal fields based on question type when opening
+            const editQuestionModal = document.getElementById('editQuestionModal');
+            editQuestionModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget; // Button that triggered the modal
+                const qtype = button.closest('.question-card').getAttribute('data-question-type');
+                const form = document.getElementById('editQuestionForm');
+                const optionsFieldDiv = form.elements['options'].closest('.mb-3');
+                const explanationFieldDiv = form.querySelector('.explanation-field');
+                const answerFieldDiv = form.querySelector('.correct-answer-field');
+
+                // Reset display states
+                optionsFieldDiv.style.display = 'block';
+                explanationFieldDiv.style.display = 'none';
+                answerFieldDiv.style.display = 'block';
+
+                // Adjust based on question type
+                if (['error_spotting', 'idiom_interpretation', 'cultural_nuances'].includes(qtype)) {
+                     explanationFieldDiv.style.display = 'block';
+                } else if (qtype === 'word_matching') {
+                    // Show options field for word matching with custom label
+                    optionsFieldDiv.style.display = 'block';
+                    form.elements['options'].closest('.mb-3').querySelector('label').textContent = 'Pairs (key:value format, one per line)';
+                    answerFieldDiv.style.display = 'none'; // Word matching doesn't use answer field
+                } else if (qtype === 'fill_in_the_blanks') {
+                    // For fill-in-the-blanks, the 'options' field is used for the hint
+                    form.elements['options'].closest('.mb-3').querySelector('label').textContent = 'Hint';
+                } else {
+                     // Default label for options
+                     form.elements['options'].closest('.mb-3').querySelector('label').textContent = 'Options (one per line)';
+                }
+            });
+
+             // Reset modal fields when hidden
+            editQuestionModal.addEventListener('hidden.bs.modal', function () {
+                 const form = document.getElementById('editQuestionForm');
+                 form.reset(); // Reset form fields
+                // Restore default label for options
+                 form.elements['options'].closest('.mb-3').querySelector('label').textContent = 'Options (one per line)';
+            });
+        });
+    </script>
+
+    <!-- Edit Question Modal -->
+    <div class="modal fade" id="editQuestionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Question</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editQuestionForm">
+                        <input type="hidden" name="question_id" id="edit-question-id">
+                        <input type="hidden" name="question_type" id="edit-question-type">
+                        <div class="mb-3">
+                            <label class="form-label">Question</label>
+                            <input type="text" name="question" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Options (one per line)</label>
+                            <textarea name="options" class="form-control" rows="4" required></textarea>
+                        </div>
+                        <div class="mb-3 explanation-field" style="display: none;">
+                            <label class="form-label">Explanation</label>
+                            <textarea name="explanation" class="form-control" rows="4"></textarea>
+                        </div>
+                        <div class="mb-3 correct-answer-field">
+                            <label class="form-label">Correct Answer</label>
+                            <input type="text" name="correct_answer" class="form-control" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="saveEditButton">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

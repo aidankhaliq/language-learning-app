@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Website Examples - LanguaMate</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f7f9fc;
+            margin: 0;
+            padding: 0;
+            color: #222;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            padding: 32px 48px 0 48px;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: #222;
+        }
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: #7b61ff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+        }
+        .logo-icon span {
+            color: #fff;
+            font-size: 1.3rem;
+        }
+        .back-btn {
+            margin-left: auto;
+            background: #fff;
+            color: #7b61ff;
+            border: 1.5px solid #7b61ff;
+            border-radius: 8px;
+            padding: 10px 24px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            text-decoration: none;
+        }
+        .back-btn:hover {
+            background: #f2f0ff;
+        }
+        .examples-title {
+            text-align: center;
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-top: 32px;
+            margin-bottom: 18px;
+            color: #7b61ff;
+        }
+        .examples-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 32px;
+            justify-content: center;
+            margin: 32px auto 60px auto;
+            max-width: 1800px;
+        }
+        .example-card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(80, 80, 180, 0.06);
+            padding: 18px 18px 8px 18px;
+            max-width: 420px;
+            min-width: 320px;
+            margin-bottom: 16px;
+            text-align: center;
+            min-height: 260px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+        }
+        .example-card img {
+            width: 100%;
+            min-height: 180px;
+            max-height: 220px;
+            object-fit: contain;
+            background: #f7f9fc;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px #e0e0e0;
+            border: 1.5px solid #e0e0e0;
+            margin-bottom: 8px;
+            display: block;
+        }
+        .example-card img:empty, .example-card img:not([src]) {
+            background: #eee;
+            border: 2px dashed #bbb;
+        }
+        .example-caption {
+            margin-top: 10px;
+            color: #555;
+            font-size: 1.05rem;
+        }
+        @media (max-width: 1000px) {
+            .examples-grid {
+                flex-direction: column;
+                align-items: center;
+            }
+            .example-card img {
+                max-width: 98vw;
+            }
+        }
+    </style>
+    <script>
+        // Modal zoom logic
+        document.addEventListener('DOMContentLoaded', function() {
+            const modal = document.createElement('div');
+            modal.id = 'img-modal';
+            modal.style.display = 'none';
+            modal.style.position = 'fixed';
+            modal.style.zIndex = '9999';
+            modal.style.left = '0';
+            modal.style.top = '0';
+            modal.style.width = '100vw';
+            modal.style.height = '100vh';
+            modal.style.background = 'rgba(0,0,0,0.85)';
+            modal.style.justifyContent = 'center';
+            modal.style.alignItems = 'center';
+            modal.style.transition = 'opacity 0.2s';
+            modal.innerHTML = `
+                <span id="close-modal" style="position:absolute;top:32px;right:60px;font-size:2.5rem;color:#fff;cursor:pointer;font-weight:700;z-index:10001;">&times;</span>
+                <img id="modal-img" src="" alt="Zoomed Example" style="max-width:90vw;max-height:85vh;border-radius:18px;box-shadow:0 4px 32px #000;display:block;margin:auto;">
+            `;
+            document.body.appendChild(modal);
+            const modalImg = modal.querySelector('#modal-img');
+            const closeModal = modal.querySelector('#close-modal');
+            closeModal.onclick = function() {
+                modal.style.display = 'none';
+                modalImg.src = '';
+            };
+            modal.onclick = function(e) {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                    modalImg.src = '';
+                }
+            };
+            document.querySelectorAll('.example-card img').forEach(img => {
+                img.style.cursor = 'zoom-in';
+                img.onclick = function(e) {
+                    modalImg.src = img.src;
+                    modal.style.display = 'flex';
+                };
+            });
+        });
+    </script>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">
+            <div class="logo-icon"><span>🌐</span></div>
+            LanguaMate
+        </div>
+        <a href="/" class="back-btn">← Back to Home</a>
+    </div>
+    <div class="examples-title">Website Example Screenshots</div>
+    <div class="examples-grid">
+        <div class="example-card">
+            <img src="/static/examples/landing.png" alt="Landing Page Example">
+            <div class="example-caption">Landing Page</div>
+        </div>
+        <div class="example-card">
+            <img src="/static/examples/chatbot.png" alt="Chatbot Example">
+            <div class="example-caption">Chatbot Interface</div>
+        </div>
+        <div class="example-card">
+            <img src="/static/examples/quiz_select.png" alt="Quiz Select Example">
+            <div class="example-caption">Quiz Language & Level Selection</div>
+        </div>
+        <div class="example-card">
+            <img src="/static/examples/profile.png" alt="Profile Example">
+            <div class="example-caption">Profile Settings</div>
+        </div>
+        <div class="example-card">
+            <img src="/static/examples/progress.png" alt="Progress Example">
+            <div class="example-caption">Progress Tracking</div>
+        </div>
+        <div class="example-card">
+            <img src="/static/examples/flashcards.png" alt="Flashcards Example">
+            <div class="example-caption">Flashcards Practice</div>
+        </div>
+    </div>
+</body>
+</html> 

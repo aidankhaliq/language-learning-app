@@ -1,0 +1,10 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+- Python for the backend
+- html/js for the frontend 
+- SQL databases, never JSON file storage
+
+- Separate databases for dev, test, and prod

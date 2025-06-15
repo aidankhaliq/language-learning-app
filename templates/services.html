@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Our Services - LanguaMate</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { background: #f7f9fc; font-family: 'Inter', sans-serif; margin: 0; color: #222; }
+        .header { display: flex; align-items: center; padding: 32px 48px 0 48px; }
+        .logo { display: flex; align-items: center; font-weight: 700; font-size: 1.5rem; color: #222; }
+        .logo-icon { width: 36px; height: 36px; background: #7b61ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 12px; }
+        .logo-icon span { color: #fff; font-size: 1.3rem; }
+        .services-title { text-align: center; font-size: 2.2rem; font-weight: 700; margin-top: 32px; margin-bottom: 18px; color: #7b61ff; }
+        .services-grid { display: flex; flex-wrap: wrap; gap: 32px; justify-content: center; margin: 0 auto 40px auto; max-width: 1200px; }
+        .service-card { background: #fff; border-radius: 16px; box-shadow: 0 2px 12px rgba(80, 80, 180, 0.06); padding: 32px 28px; min-width: 320px; max-width: 370px; text-align: center; }
+        .service-icon { width: 56px; height: 56px; margin: 0 auto 18px auto; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #f2f0ff; font-size: 2rem; color: #7b61ff; }
+        .service-card h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 10px; }
+        .service-card p { color: #555; font-size: 1rem; margin-bottom: 1rem; }
+        .service-card ul { text-align: left; margin: 0 auto 0 0; padding-left: 1.2em; color: #222; }
+        .service-card li { margin-bottom: 0.4em; }
+        .contact-btn { display: block; margin: 32px auto 0 auto; background: #7b61ff; color: #fff; border: none; border-radius: 8px; padding: 14px 32px; font-weight: 600; font-size: 1.1rem; cursor: pointer; text-decoration: none; text-align: center; transition: background 0.2s; }
+        .contact-btn:hover { background: #4f8cff; }
+        @media (max-width: 1100px) { .services-grid { flex-direction: column; align-items: center; } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">
+            <div class="logo-icon"><span>🌐</span></div>
+            LanguaMate
+        </div>
+    </div>
+    <div class="services-title">Our Services</div>
+    <div class="services-grid">
+        <div class="service-card">
+            <div class="service-icon">🤖</div>
+            <h2>AI Chatbot</h2>
+            <p>Practice real conversations with our intelligent AI chatbot that provides instant feedback and helps you improve your speaking and comprehension skills.</p>
+            <ul>
+                <li>Natural conversation practice</li>
+                <li>Instant feedback</li>
+                <li>Multiple languages supported</li>
+                <li>24/7 availability</li>
+            </ul>
+        </div>
+        <div class="service-card">
+            <div class="service-icon">❓</div>
+            <h2>Quiz Questions</h2>
+            <p>Test your knowledge with interactive quizzes tailored to your learning level. Track your progress and identify areas for improvement.</p>
+            <ul>
+                <li>Adaptive difficulty</li>
+                <li>Progress tracking</li>
+                <li>Multiple question types</li>
+                <li>Detailed explanations</li>
+            </ul>
+        </div>
+        <div class="service-card">
+            <div class="service-icon">🗂️</div>
+            <h2>Flashcards</h2>
+            <p>Master vocabulary and grammar with our smart flashcard system that uses spaced repetition to optimize your learning retention.</p>
+        </div>
+    </div>
+    <a href="{{ url_for('contact') }}" class="contact-btn">Contact Us</a>
+    <a href="/" class="contact-btn" style="margin-top:18px; background:#fff; color:#7b61ff; border:1.5px solid #7b61ff;">← Back to Home</a>
+</body>
+</html> 

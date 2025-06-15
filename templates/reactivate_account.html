@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reactivate Account | Language Learning Assistant</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        body { 
+            background: #f8f9fb; 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            margin: 0; 
+            padding: 0; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .reactivate-card {
+            background: #fff;
+            border-radius: 14px;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.04);
+            padding: 40px;
+            max-width: 500px;
+            width: 90%;
+        }
+        .reactivate-card h2 {
+            margin-top: 0;
+            font-size: 28px;
+            font-weight: 700;
+            color: #222;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            background: #fafbfc;
+            box-sizing: border-box;
+        }
+        input:focus {
+            border-color: #e91e63;
+            outline: none;
+        }
+        .reactivate-btn {
+            background: #e91e63;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 14px 32px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s;
+        }
+        .reactivate-btn:hover {
+            background: #c2185b;
+        }
+        .flash-messages {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        .flash-message {
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            color: white;
+            animation: slideIn 0.5s, fadeOut 0.5s 2.5s forwards;
+        }
+        .flash-success {
+            background-color: #4CAF50;
+        }
+        .flash-error {
+            background-color: #f44336;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+        @keyframes fadeOut {
+            to { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Flash messages container -->
+    <div class="flash-messages">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash-message flash-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <div class="reactivate-card">
+        <h2>Reactivate Your Account</h2>
+        <form method="POST" action="{{ url_for('reactivate_account') }}">
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <div class="form-group">
+                <label for="security_answer">Security Answer</label>
+                <input type="text" id="security_answer" name="security_answer" required>
+            </div>
+            <div class="form-group">
+                <label for="reason">Reason for Reactivation</label>
+                <input type="text" id="reason" name="reason" required 
+                       placeholder="Please explain why you want to reactivate your account">
+            </div>
+            <button type="submit" class="reactivate-btn">Reactivate Account</button>
+        </form>
+    </div>
+
+    <script>
+        // Auto-hide flash messages after 3 seconds
+        setTimeout(() => {
+            const flashMessages = document.querySelectorAll('.flash-message');
+            flashMessages.forEach(msg => {
+                msg.style.display = 'none';
+            });
+        }, 3000);
+    </script>
+</body>
+</html> 

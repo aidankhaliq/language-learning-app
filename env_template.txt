@@ -1,0 +1,71 @@
+# Environment Variables Template for Language Learning App
+# Instructions: Copy this content to a file named ".env" and fill in your actual values
+
+# ===== API KEYS =====
+# Google Gemini API Key for AI chatbot functionality
+# Get your key from: https://makersuite.google.com/app/apikey
+GEMINI_API_KEY=your_gemini_api_key_here
+
+# ===== DATABASE CONFIGURATION =====
+# SQLite database file path (relative to project root)
+# Note: The app automatically uses /data/database.db on Render or local database.db for development
+DATABASE_PATH=database.db
+
+# ===== FLASK CONFIGURATION =====
+# Flask secret key for session management
+# Generate a strong random key: python -c "import secrets; print(secrets.token_hex(32))"
+FLASK_SECRET_KEY=your_flask_secret_key_here
+
+# Flask environment (development/production)
+FLASK_ENV=development
+
+# Flask debug mode (True/False) - not needed for production
+FLASK_DEBUG=True
+
+# Application port (for local development)
+PORT=5000
+
+# ===== EMAIL CONFIGURATION (for OTP and notifications) =====
+# Email service settings for sending OTP codes
+SMTP_SERVER=smtp.gmail.com
+SMTP_PORT=465
+SMTP_USER=your_email@gmail.com
+SMTP_PASSWORD=your_app_password_here
+
+# Use console OTP instead of email (True for development, False for production)
+USE_CONSOLE_OTP=True
+
+# ===== UPLOAD CONFIGURATION =====
+# Maximum file size for uploads (in bytes)
+MAX_CONTENT_LENGTH=16777216  # 16MB
+
+# Upload folder path
+UPLOAD_FOLDER=static/uploads
+
+# ===== SECURITY SETTINGS =====
+# Note: Admin credentials are hardcoded in scripts/init_db.py
+# Default admin login: admin / adminpassword
+# Security answer: admin
+# You can change the password after first login via the admin dashboard
+
+# Session timeout (in seconds)
+SESSION_TIMEOUT=3600  # 1 hour
+
+# ===== RATE LIMITING =====
+# API rate limits (requests per minute)
+CHAT_RATE_LIMIT=30
+QUIZ_RATE_LIMIT=20
+UPLOAD_RATE_LIMIT=5
+
+# ===== LOGGING =====
+# Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+LOG_LEVEL=INFO
+
+# Log file path
+LOG_FILE=app.log
+
+# ===== USAGE INSTRUCTIONS =====
+# 1. Copy this file and rename it to ".env" (remove .txt extension)
+# 2. Replace all "your_*_here" values with your actual credentials
+# 3. Never commit the .env file to version control
+# 4. Add .env to your .gitignore file 

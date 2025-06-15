@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        body {
+            background: url('/static/llg_admin_login_background.png') no-repeat center center fixed;
+            background-size: cover;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .form-container {
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 40px;
+            border-radius: 15px;
+            width: 300px;
+            text-align: center;
+            box-shadow: 0 5px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-container h2 {
+            color: #FF6347;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #FF6347;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #FF4500;
+        }
+
+        p {
+            margin-top: 20px;
+            color: #FF6347;
+        }
+
+        a {
+            text-decoration: none;
+            color: #FF4500;
+            font-weight: bold;
+        }
+
+        .error {
+            color: red;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="form-container">
+            <h2>Admin Login</h2>
+            {% if error %}
+                <p class="error">{{ error }}</p>
+            {% endif %}
+            <form method="POST">
+                <div class="input-field">
+                    <input type="email" name="email" placeholder="Enter admin email" required>
+                </div>
+                <div class="input-field">
+                    <input type="password" name="password" placeholder="Enter admin password" required>
+                </div>
+                <button type="submit">Login</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

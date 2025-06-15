@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flashcards Practice</title>
+    <style>
+        body {
+            background: linear-gradient(135deg, #23272f 0%, #181c23 100%);
+            color: #222;
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+        .header {
+            width: 100%;
+            background: #23272f;
+            padding: 1.2rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 2rem;
+            color: #7fc9ff;
+            letter-spacing: 1px;
+        }
+        .nav-btn {
+            background: #8e44ad;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-left: 10px;
+            transition: background 0.2s;
+        }
+        .nav-btn:hover {
+            background: #9b59b6;
+        }
+        .controls-bar {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 2rem;
+            margin: 2rem 0 1.5rem 0;
+        }
+        .selector {
+            background: #23272f;
+            color: #fff;
+            border: 1.5px solid #4a90e2;
+            border-radius: 8px;
+            padding: 10px 18px;
+            font-size: 1.1rem;
+            margin-right: 10px;
+        }
+        .flashcard-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2.5rem;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+        .flashcard {
+            width: 370px;
+            min-height: 240px;
+            background: #23272f;
+            border-radius: 22px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.15rem;
+            font-weight: 500;
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            text-align: center;
+            transition: box-shadow 0.3s, transform 0.3s;
+            perspective: 800px;
+            padding: 1.5rem 1.2rem;
+        }
+        .flashcard:hover {
+            box-shadow: 0 12px 40px #4a90e2a0;
+            transform: translateY(-6px) scale(1.03);
+        }
+        .flashcard-inner {
+            width: 100%;
+            min-height: 240px;
+            position: absolute;
+            top: 0; left: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 22px;
+            transition: transform 0.6s cubic-bezier(.4,2,.6,1);
+            background: inherit;
+            backface-visibility: hidden;
+            padding: 1.5rem 1.2rem;
+        }
+        .flashcard.flipped .flashcard-inner.front {
+            transform: rotateY(180deg);
+        }
+        .flashcard.flipped .flashcard-inner.back {
+            transform: rotateY(0deg);
+        }
+        .flashcard-inner.back {
+            transform: rotateY(180deg);
+            background: #4a90e2;
+            color: #fff;
+        }
+        .flashcard-inner.front {
+            background: #23272f;
+        }
+        .flashcard-question {
+            color: #fff;
+            font-size: 1.22rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            text-shadow: 0 2px 8px #000, 0 0 2px #4a90e2;
+            letter-spacing: 0.2px;
+        }
+        .options-list {
+            margin: 1.2rem 0 0 0;
+            padding: 0;
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.7rem;
+        }
+        .option {
+            background: #313543;
+            border-radius: 8px;
+            padding: 0.7rem 1.2rem;
+            color: #7fc9ff;
+            font-size: 1.08rem;
+            border: 1.5px solid #4a90e2;
+            transition: background 0.2s, color 0.2s;
+            cursor: pointer;
+            text-align: left;
+        }
+        .option.selected {
+            background: #4a90e2;
+            color: #fff;
+        }
+        .type-label {
+            font-size: 0.95rem;
+            color: #7fc9ff;
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.5px;
+        }
+        .footer {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            color: #aaa;
+            font-size: 1rem;
+            text-align: center;
+        }
+        .no-cards {
+            color: #aaa;
+            font-size: 1.2rem;
+            margin-top: 2rem;
+        }
+        @media (max-width: 900px) {
+            .flashcard {
+                width: 95vw;
+                min-width: 0;
+                max-width: 98vw;
+                min-height: 200px;
+                padding: 1.2rem 0.7rem;
+            }
+            .flashcard-inner {
+                min-height: 200px;
+                padding: 1.2rem 0.7rem;
+            }
+        }
+        @media (max-width: 600px) {
+            .flashcard {
+                width: 99vw;
+                min-width: 0;
+                max-width: 99vw;
+                min-height: 160px;
+                padding: 0.7rem 0.2rem;
+            }
+            .flashcard-inner {
+                min-height: 160px;
+                padding: 0.7rem 0.2rem;
+            }
+            .flashcard-question {
+                font-size: 1.05rem;
+            }
+            .option {
+                font-size: 0.98rem;
+                padding: 0.5rem 0.7rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Flashcards Practice</h1>
+        <div>
+            <button class="nav-btn" onclick="window.location.href='/dashboard'">Dashboard</button>
+            <button class="nav-btn" onclick="window.location.href='/quiz'">Go to Quiz</button>
+        </div>
+    </div>
+    <div class="controls-bar">
+        <label for="language-select">Language:</label>
+        <select id="language-select" class="selector">
+            <option value="english">English</option>
+            <option value="spanish">Spanish</option>
+            <option value="french">French</option>
+            <option value="chinese">Chinese</option>
+            <option value="tamil">Tamil</option>
+            <option value="malay">Malay</option>
+            <option value="portuguese">Portuguese</option>
+        </select>
+        <label for="type-select">Type:</label>
+        <select id="type-select" class="selector">
+            <option value="quiz">Quiz Practice</option>
+            <option value="gapped">Gapped Sentences</option>
+            <option value="idiom">Idioms</option>
+            <option value="synonym">Synonyms</option>
+            <option value="antonym">Antonyms</option>
+            <option value="definition">Definitions</option>
+            <option value="translation">Translations</option>
+        </select>
+    </div>
+    <div class="flashcard-grid" id="flashcard-grid"></div>
+    <div class="footer">
+        Practice with different types of flashcards before taking the quiz. Click a card to flip and see the answer!
+    </div>
+    <script>
+        let currentLanguage = 'english';
+        let currentType = 'quiz';
+        let flashcards = [];
+
+        // Example static data for non-quiz types
+        const staticFlashcardData = {
+            english: {
+                gapped: [
+                    { question: 'She was in ___ of tears.', answer: 'floods' },
+                    { question: 'He ___ a book every night.', answer: 'reads' },
+                    { question: 'The cat ___ on the mat.', answer: 'sat' },
+                    { question: 'They ___ to the store yesterday.', answer: 'went' },
+                    { question: 'I ___ breakfast at 8am.', answer: 'eat' },
+                    { question: 'We ___ playing football.', answer: 'are' },
+                    { question: 'She ___ her homework before dinner.', answer: 'finished' },
+                    { question: 'He ___ a new car last week.', answer: 'bought' },
+                    { question: 'The sun ___ in the east.', answer: 'rises' },
+                    { question: 'Birds ___ in the sky.', answer: 'fly' },
+                    // 40 more generated examples
+                    { question: 'The dog ___ loudly at night.', answer: 'barks' },
+                    { question: 'We ___ to school by bus.', answer: 'go' },
+                    { question: 'She ___ her keys at home.', answer: 'left' },
+                    { question: 'He ___ his shoes before entering.', answer: 'removes' },
+                    { question: 'The flowers ___ in spring.', answer: 'bloom' },
+                    { question: 'I ___ my teeth twice a day.', answer: 'brush' },
+                    { question: 'They ___ a movie last night.', answer: 'watched' },
+                    { question: 'The baby ___ when hungry.', answer: 'cries' },
+                    { question: 'We ___ dinner at 7pm.', answer: 'have' },
+                    { question: 'She ___ a beautiful song.', answer: 'sings' },
+                    { question: 'He ___ the answer quickly.', answer: 'knew' },
+                    { question: 'The car ___ very fast.', answer: 'moves' },
+                    { question: 'I ___ a letter to my friend.', answer: 'wrote' },
+                    { question: 'They ___ the door.', answer: 'opened' },
+                    { question: 'The teacher ___ the lesson.', answer: 'explained' },
+                    { question: 'She ___ a red dress.', answer: 'wore' },
+                    { question: 'He ___ the ball into the goal.', answer: 'kicked' },
+                    { question: 'The cake ___ delicious.', answer: 'tastes' },
+                    { question: 'We ___ a picnic in the park.', answer: 'had' },
+                    { question: 'The phone ___ suddenly.', answer: 'rang' },
+                    { question: 'She ___ the window.', answer: 'closed' },
+                    { question: 'He ___ the answer on the board.', answer: 'wrote' },
+                    { question: 'The birds ___ south for winter.', answer: 'fly' },
+                    { question: 'I ___ my homework every day.', answer: 'do' },
+                    { question: 'They ___ a new house.', answer: 'built' },
+                    { question: 'The sun ___ at 6am.', answer: 'rises' },
+                    { question: 'She ___ a glass of water.', answer: 'drank' },
+                    { question: 'He ___ the guitar well.', answer: 'plays' },
+                    { question: 'The children ___ in the playground.', answer: 'play' },
+                    { question: 'We ___ the answer together.', answer: 'found' },
+                    { question: 'She ___ a story to the class.', answer: 'told' },
+                    { question: 'He ___ the bus to work.', answer: 'takes' },
+                    { question: 'The dog ___ the ball.', answer: 'fetches' },
+                    { question: 'I ___ a new language.', answer: 'learn' },
+                    { question: 'They ___ the mountain.', answer: 'climbed' },
+                    { question: 'The rain ___ all night.', answer: 'fell' },
+                    { question: 'She ___ the answer easily.', answer: 'guessed' },
+                    { question: 'He ___ the book on the table.', answer: 'put' },
+                    { question: 'The baby ___ asleep quickly.', answer: 'fell' },
+                    { question: 'We ___ the movie already.', answer: 'saw' }
+                ],
+                idiom: [
+                    { question: 'Break a leg', answer: 'Good luck' },
+                    { question: 'Hit the sack', answer: 'Go to sleep' },
+                    { question: 'Piece of cake', answer: 'Very easy' },
+                    { question: 'Let the cat out of the bag', answer: 'Reveal a secret' },
+                    { question: 'Under the weather', answer: 'Feeling sick' },
+                    { question: 'Spill the beans', answer: 'Reveal secret information' },
+                    { question: 'Bite the bullet', answer: 'Face a difficult situation bravely' },
+                    { question: 'Cost an arm and a leg', answer: 'Very expensive' },
+                    { question: 'Once in a blue moon', answer: 'Very rarely' },
+                    { question: 'The ball is in your court', answer: 'It is your decision' },
+                    { question: 'A blessing in disguise', answer: 'A good thing that seemed bad at first' },
+                    { question: 'Call it a day', answer: 'Stop working on something' },
+                    { question: 'Cut somebody some slack', answer: 'Don\'t be so critical' },
+                    { question: 'Getting a taste of your own medicine', answer: 'Being treated the way you have treated others' },
+                    { question: 'Giving someone the cold shoulder', answer: 'Ignoring someone' },
+                    { question: 'Go the extra mile', answer: 'Make a special effort' },
+                    { question: 'It takes two to tango', answer: 'Actions or communications need more than one person' },
+                    { question: 'Let sleeping dogs lie', answer: 'Do not disturb a situation as it is' },
+                    { question: 'Miss the boat', answer: 'Miss an opportunity' },
+                    { question: 'No pain, no gain', answer: 'You have to work for what you want' },
+                    { question: 'On the ball', answer: 'Doing a good job' },
+                    { question: 'Pull someone\'s leg', answer: 'Joke or tease someone' },
+                    { question: 'Speak of the devil', answer: 'The person we were just talking about showed up' },
+                    { question: 'The best of both worlds', answer: 'An ideal situation' },
+                    { question: 'Time flies when you\'re having fun', answer: 'Time seems to move faster when you\'re enjoying yourself' },
+                    { question: 'To get bent out of shape', answer: 'To get upset' },
+                    { question: 'Under the table', answer: 'Secretly, often illegally' },
+                    { question: 'Up in the air', answer: 'Uncertain or undecided' },
+                    { question: 'Your guess is as good as mine', answer: 'I do not know either' },
+                    { question: 'Burn the midnight oil', answer: 'Work late into the night' },
+                    { question: 'Caught between a rock and a hard place', answer: 'Facing two difficult choices' },
+                    { question: 'Don\'t count your chickens before they hatch', answer: 'Don\'t assume success too early' },
+                    { question: 'Every cloud has a silver lining', answer: 'There is something good in every bad situation' },
+                    { question: 'Hit the nail on the head', answer: 'Do or say something exactly right' },
+                    { question: 'Let the chips fall where they may', answer: 'Let something happen, no matter what happens next' },
+                    { question: 'Not playing with a full deck', answer: 'Someone who lacks intelligence' },
+                    { question: 'Put all your eggs in one basket', answer: 'Rely on one single thing' },
+                    { question: 'The last straw', answer: 'The final problem in a series of problems' },
+                    { question: 'Throw in the towel', answer: 'Give up' },
+                    { question: 'A dime a dozen', answer: 'Very common' },
+                    { question: 'Back to the drawing board', answer: 'Start over' },
+                    { question: 'Beat around the bush', answer: 'Avoid saying what you mean' },
+                    { question: 'Cut to the chase', answer: 'Get to the point' },
+                    { question: 'Easy does it', answer: 'Slow down' },
+                    { question: 'Get out of hand', answer: 'Get out of control' },
+                    { question: 'Hang in there', answer: 'Don\'t give up' },
+                    { question: 'In hot water', answer: 'In trouble' },
+                    { question: 'Jump on the bandwagon', answer: 'Join a popular trend' },
+                    { question: 'Keep your chin up', answer: 'Stay positive' },
+                    { question: 'Let someone off the hook', answer: 'Let someone go without punishment' },
+                    { question: 'Make a long story short', answer: 'Tell something briefly' }
+                ],
+                synonym: [
+                    { question: 'happy', answer: 'joyful' },
+                    { question: 'very loud', answer: 'deafening' },
+                    { question: 'angry', answer: 'furious' },
+                    { question: 'small', answer: 'tiny' },
+                    { question: 'fast', answer: 'quick' },
+                    { question: 'smart', answer: 'intelligent' },
+                    { question: 'brave', answer: 'courageous' },
+                    { question: 'funny', answer: 'humorous' },
+                    { question: 'strong', answer: 'powerful' },
+                    { question: 'rich', answer: 'wealthy' },
+                    // 40 more generated examples
+                    { question: 'sad', answer: 'unhappy' },
+                    { question: 'old', answer: 'ancient' },
+                    { question: 'new', answer: 'recent' },
+                    { question: 'hard', answer: 'difficult' },
+                    { question: 'easy', answer: 'simple' },
+                    { question: 'quick', answer: 'rapid' },
+                    { question: 'slow', answer: 'lethargic' },
+                    { question: 'bright', answer: 'luminous' },
+                    { question: 'dark', answer: 'dim' },
+                    { question: 'clean', answer: 'spotless' },
+                    { question: 'dirty', answer: 'filthy' },
+                    { question: 'strong', answer: 'sturdy' },
+                    { question: 'weak', answer: 'frail' },
+                    { question: 'beautiful', answer: 'gorgeous' },
+                    { question: 'ugly', answer: 'hideous' },
+                    { question: 'friendly', answer: 'amiable' },
+                    { question: 'mean', answer: 'cruel' },
+                    { question: 'fun', answer: 'enjoyable' },
+                    { question: 'boring', answer: 'dull' },
+                    { question: 'important', answer: 'crucial' },
+                    { question: 'unimportant', answer: 'insignificant' },
+                    { question: 'safe', answer: 'secure' },
+                    { question: 'dangerous', answer: 'hazardous' },
+                    { question: 'cheap', answer: 'inexpensive' },
+                    { question: 'expensive', answer: 'costly' },
+                    { question: 'quiet', answer: 'silent' },
+                    { question: 'noisy', answer: 'loud' },
+                    { question: 'thin', answer: 'slender' },
+                    { question: 'thick', answer: 'dense' },
+                    { question: 'tall', answer: 'lofty' },
+                    { question: 'short', answer: 'brief' },
+                    { question: 'wide', answer: 'broad' },
+                    { question: 'narrow', answer: 'slim' },
+                    { question: 'hot', answer: 'scorching' },
+                    { question: 'cold', answer: 'chilly' },
+                    { question: 'wet', answer: 'damp' },
+                    { question: 'dry', answer: 'arid' },
+                    { question: 'early', answer: 'premature' },
+                    { question: 'late', answer: 'tardy' },
+                    { question: 'right', answer: 'correct' },
+                    { question: 'wrong', answer: 'incorrect' }
+                ],
+                antonym: [
+                    { question: 'eager', answer: 'reluctant' },
+                    { question: 'ancient', answer: 'modern' },
+                    { question: 'happy', answer: 'sad' },
+                    { question: 'begin', answer: 'end' },
+                    { question: 'accept', answer: 'reject' },
+                    { question: 'brave', answer: 'cowardly' },
+                    { question: 'increase', answer: 'decrease' },
+                    { question: 'success', answer: 'failure' },
+                    { question: 'generous', answer: 'stingy' },
+                    { question: 'include', answer: 'exclude' },
+                    // 40 more generated examples
+                    { question: 'love', answer: 'hate' },
+                    { question: 'light', answer: 'dark' },
+                    { question: 'up', answer: 'down' },
+                    { question: 'left', answer: 'right' },
+                    { question: 'open', answer: 'close' },
+                    { question: 'full', answer: 'empty' },
+                    { question: 'rich', answer: 'poor' },
+                    { question: 'strong', answer: 'weak' },
+                    { question: 'young', answer: 'old' },
+                    { question: 'early', answer: 'late' },
+                    { question: 'clean', answer: 'dirty' },
+                    { question: 'safe', answer: 'dangerous' },
+                    { question: 'cheap', answer: 'expensive' },
+                    { question: 'thick', answer: 'thin' },
+                    { question: 'tall', answer: 'short' },
+                    { question: 'wide', answer: 'narrow' },
+                    { question: 'hot', answer: 'cold' },
+                    { question: 'wet', answer: 'dry' },
+                    { question: 'hard', answer: 'soft' },
+                    { question: 'strong', answer: 'fragile' },
+                    { question: 'beautiful', answer: 'ugly' },
+                    { question: 'friend', answer: 'enemy' },
+                    { question: 'success', answer: 'failure' },
+                    { question: 'possible', answer: 'impossible' },
+                    { question: 'visible', answer: 'invisible' },
+                    { question: 'agree', answer: 'disagree' },
+                    { question: 'arrive', answer: 'depart' },
+                    { question: 'build', answer: 'destroy' },
+                    { question: 'create', answer: 'destroy' },
+                    { question: 'enter', answer: 'exit' },
+                    { question: 'find', answer: 'lose' },
+                    { question: 'give', answer: 'take' },
+                    { question: 'laugh', answer: 'cry' },
+                    { question: 'married', answer: 'single' },
+                    { question: 'push', answer: 'pull' },
+                    { question: 'remember', answer: 'forget' },
+                    { question: 'start', answer: 'finish' },
+                    { question: 'strong', answer: 'weak' },
+                    { question: 'victory', answer: 'defeat' },
+                    { question: 'win', answer: 'lose' },
+                    { question: 'yes', answer: 'no' }
+                ],
+                definition: [
+                    { question: 'a place where you do science experiments', answer: 'laboratory' },
+                    { question: 'a person who teaches', answer: 'teacher' },
+                    { question: 'a building where books are kept', answer: 'library' },
+                    { question: 'a tool used to write', answer: 'pen' },
+                    { question: 'a vehicle with two wheels', answer: 'bicycle' },
+                    { question: 'a person who acts in movies', answer: 'actor' },
+                    { question: 'a large body of water', answer: 'ocean' },
+                    { question: 'a person who fixes teeth', answer: 'dentist' },
+                    { question: 'a machine to keep food cold', answer: 'refrigerator' },
+                    { question: 'a person who flies an airplane', answer: 'pilot' },
+                    // 40 more generated examples
+                    { question: 'a person who writes books', answer: 'author' },
+                    { question: 'a place where you buy medicine', answer: 'pharmacy' },
+                    { question: 'a person who paints pictures', answer: 'artist' },
+                    { question: 'a place where you watch movies', answer: 'cinema' },
+                    { question: 'a person who repairs cars', answer: 'mechanic' },
+                    { question: 'a place where you eat food', answer: 'restaurant' },
+                    { question: 'a person who delivers letters', answer: 'postman' },
+                    { question: 'a place where you sleep', answer: 'bedroom' },
+                    { question: 'a person who leads a country', answer: 'president' },
+                    { question: 'a place where you play sports', answer: 'stadium' },
+                    { question: 'a person who takes care of sick people', answer: 'nurse' },
+                    { question: 'a place where you see animals', answer: 'zoo' },
+                    { question: 'a person who makes bread', answer: 'baker' },
+                    { question: 'a place where you swim', answer: 'pool' },
+                    { question: 'a person who plays music', answer: 'musician' },
+                    { question: 'a place where you park cars', answer: 'garage' },
+                    { question: 'a person who grows crops', answer: 'farmer' },
+                    { question: 'a place where you get on a train', answer: 'station' },
+                    { question: 'a person who studies the stars', answer: 'astronomer' },
+                    { question: 'a place where you buy food', answer: 'supermarket' },
+                    { question: 'a person who designs buildings', answer: 'architect' },
+                    { question: 'a place where you get your hair cut', answer: 'salon' },
+                    { question: 'a person who serves food in a restaurant', answer: 'waiter' },
+                    { question: 'a place where you see art', answer: 'gallery' },
+                    { question: 'a person who drives a taxi', answer: 'driver' },
+                    { question: 'a place where you learn', answer: 'school' },
+                    { question: 'a person who catches criminals', answer: 'police officer' },
+                    { question: 'a place where you see plays', answer: 'theater' },
+                    { question: 'a person who sails a ship', answer: 'sailor' },
+                    { question: 'a place where you buy clothes', answer: 'store' },
+                    { question: 'a person who makes furniture', answer: 'carpenter' },
+                    { question: 'a place where you get coffee', answer: 'cafe' },
+                    { question: 'a person who takes photographs', answer: 'photographer' },
+                    { question: 'a place where you get medical help', answer: 'hospital' },
+                    { question: 'a person who plays football', answer: 'footballer' },
+                    { question: 'a place where you see fish', answer: 'aquarium' },
+                    { question: 'a person who writes news articles', answer: 'journalist' },
+                    { question: 'a place where you buy books', answer: 'bookstore' },
+                    { question: 'a person who sings', answer: 'singer' },
+                    { question: 'a place where you get on a plane', answer: 'airport' }
+                ],
+                translation: [
+                    { question: 'tranquilo', answer: 'calm' },
+                    { question: 'libro', answer: 'book' },
+                    { question: 'amigo', answer: 'friend' },
+                    { question: 'escuela', answer: 'school' },
+                    { question: 'perro', answer: 'dog' },
+                    { question: 'gato', answer: 'cat' },
+                    { question: 'casa', answer: 'house' },
+                    { question: 'comida', answer: 'food' },
+                    { question: 'agua', answer: 'water' },
+                    { question: 'feliz', answer: 'happy' },
+                    // 40 more generated examples
+                    { question: 'rojo', answer: 'red' },
+                    { question: 'azul', answer: 'blue' },
+                    { question: 'verde', answer: 'green' },
+                    { question: 'amarillo', answer: 'yellow' },
+                    { question: 'negro', answer: 'black' },
+                    { question: 'blanco', answer: 'white' },
+                    { question: 'gris', answer: 'gray' },
+                    { question: 'mujer', answer: 'woman' },
+                    { question: 'hombre', answer: 'man' },
+                    { question: 'niño', answer: 'boy' },
+                    { question: 'niña', answer: 'girl' },
+                    { question: 'madre', answer: 'mother' },
+                    { question: 'padre', answer: 'father' },
+                    { question: 'hermano', answer: 'brother' },
+                    { question: 'hermana', answer: 'sister' },
+                    { question: 'abuelo', answer: 'grandfather' },
+                    { question: 'abuela', answer: 'grandmother' },
+                    { question: 'tío', answer: 'uncle' },
+                    { question: 'tía', answer: 'aunt' },
+                    { question: 'primo', answer: 'cousin' },
+                    { question: 'sol', answer: 'sun' },
+                    { question: 'luna', answer: 'moon' },
+                    { question: 'estrella', answer: 'star' },
+                    { question: 'cielo', answer: 'sky' },
+                    { question: 'mar', answer: 'sea' },
+                    { question: 'montaña', answer: 'mountain' },
+                    { question: 'río', answer: 'river' },
+                    { question: 'bosque', answer: 'forest' },
+                    { question: 'flor', answer: 'flower' },
+                    { question: 'árbol', answer: 'tree' },
+                    { question: 'pájaro', answer: 'bird' },
+                    { question: 'pez', answer: 'fish' },
+                    { question: 'ratón', answer: 'mouse' },
+                    { question: 'caballo', answer: 'horse' },
+                    { question: 'vaca', answer: 'cow' },
+                    { question: 'cerdo', answer: 'pig' },
+                    { question: 'oveja', answer: 'sheep' },
+                    { question: 'pollo', answer: 'chicken' },
+                    { question: 'leche', answer: 'milk' },
+                    { question: 'pan', answer: 'bread' }
+                ]
+            },
+            spanish: {
+                gapped: [
+                    { question: 'El gato ___ en la alfombra.', answer: 'se sienta' },
+                    { question: 'Nosotros ___ al parque.', answer: 'vamos' },
+                    { question: 'Ella ___ una carta.', answer: 'escribe' },
+                    { question: 'El perro ___ fuerte.', answer: 'ladra' },
+                    { question: 'Tú ___ la puerta.', answer: 'abres' },
+                    { question: 'Ellos ___ fútbol.', answer: 'juegan' },
+                    { question: 'Yo ___ agua.', answer: 'bebo' },
+                    { question: 'Usted ___ temprano.', answer: 'llega' },
+                    { question: 'El sol ___ en el este.', answer: 'sale' },
+                    { question: 'Los pájaros ___ en el cielo.', answer: 'vuelan' }
+                ],
+                idiom: [
+                    { question: 'Estar en las nubes', answer: 'Ser despistado' },
+                    { question: 'Tirar la toalla', answer: 'Rendirse' },
+                    { question: 'Ser pan comido', answer: 'Ser muy fácil' },
+                    { question: 'Meter la pata', answer: 'Cometer un error' },
+                    { question: 'Costar un ojo de la cara', answer: 'Ser muy caro' },
+                    { question: 'No tener pelos en la lengua', answer: 'Hablar claro' },
+                    { question: 'Estar como una cabra', answer: 'Estar loco' },
+                    { question: 'Dar en el clavo', answer: 'Acertar' },
+                    { question: 'Echar agua al mar', answer: 'Hacer algo inútil' },
+                    { question: 'Estar entre la espada y la pared', answer: 'Estar en una situación difícil' }
+                ],
+                synonym: [
+                    { question: 'feliz', answer: 'contento' },
+                    { question: 'rápido', answer: 'veloz' },
+                    { question: 'bonito', answer: 'hermoso' },
+                    { question: 'grande', answer: 'luas' },
+                    { question: 'pequeño', answer: 'halus' },
+                    { question: 'fácil', answer: 'senang' },
+                    { question: 'difícil', answer: 'complicado' },
+                    { question: 'amigo', answer: 'rakan' },
+                    { question: 'bercakap', answer: 'berkata' },
+                    { question: 'mula', answer: 'memulakan' }
+                ],
+                antonym: [
+                    { question: 'alto', answer: 'rendah' },
+                    { question: 'feliz', answer: 'sedih' },
+                    { question: 'rápido', answer: 'lambat' },
+                    { question: 'fácil', answer: 'sukar' },
+                    { question: 'grande', answer: 'kecil' },
+                    { question: 'nuevo', answer: 'lama' },
+                    { question: 'quente', answer: 'frio' },
+                    { question: 'duro', answer: 'macio' },
+                    { question: 'limpo', answer: 'kotor' },
+                    { question: 'dekat', answer: 'jauh' }
+                ],
+                definition: [
+                    { question: 'Animal que dice miau', answer: 'kucing' },
+                    { question: 'Lugar donde estudian los niños', answer: 'escuela' },
+                    { question: 'Persona que enseña', answer: 'profesor' },
+                    { question: 'Fruto amarillo y curvo', answer: 'pisang' },
+                    { question: 'Vehículo de cuatro ruedas', answer: 'coche' },
+                    { question: 'a person who fixes teeth', answer: 'dentist' },
+                    { question: 'a machine to keep food cold', answer: 'refrigerator' },
+                    { question: 'a person who flies an airplane', answer: 'pilot' },
+                    { question: 'Edifício donde vives', answer: 'casa' }
+                ],
+                translation: [
+                    { question: 'house', answer: 'rumah' },
+                    { question: 'dog', answer: 'anjing' },
+                    { question: 'cat', answer: 'kucing' },
+                    { question: 'car', answer: 'mobil' },
+                    { question: 'book', answer: 'buku' },
+                    { question: 'school', answer: 'sekolah' },
+                    { question: 'friend', answer: 'kawan' },
+                    { question: 'water', answer: 'air' },
+                    { question: 'food', answer: 'makanan' },
+                    { question: 'sun', answer: 'matahari' }
+                ]
+            },
+            french: {
+                gapped: [
+                    { question: "Le chat ___ sur le tapis.", answer: "s'assoit" },
+                    { question: "Nous ___ au parc.", answer: "allons" },
+                    { question: "Ela ___ une lettre.", answer: "écrit" },
+                    { question: "Le chien ___ fort.", answer: "aboie" },
+                    { question: "Tu ___ la porte.", answer: "ouvres" },
+                    { question: "Ils ___ au football.", answer: "jouent" },
+                    { question: "Je ___ de l'eau.", answer: "bebo" },
+                    { question: "Vous ___ tôt.", answer: "arrivez" },
+                    { question: "Le soleil ___ à l'est.", answer: "se lève" },
+                    { question: "Les oiseaux ___ dans le ciel.", answer: "volent" }
+                ],
+                idiom: [
+                    { question: "Donner sa langue au chat", answer: "Abandonner une devinette" },
+                    { question: "Avoir le cafard", answer: "Être triste" },
+                    { question: "Casser les pieds", answer: "Ennuyer" },
+                    { question: "Être dans la lune", answer: "Être distrait" },
+                    { question: "Tomber dans les pommes", answer: "S'évanouir" },
+                    { question: "Avoir un poil dans la main", answer: "Être paresseux" },
+                    { question: "Poser un lapin", answer: "Ne pas venir à un rendez-vous" },
+                    { question: "Avoir la pêche", answer: "Être en forme" },
+                    { question: "Être fauché", answer: "Ne plus avoir d'argent" },
+                    { question: "Avoir le coup de foudre", answer: "Tomber amoureux soudainement" }
+                ],
+                synonym: [
+                    { question: "heureux", answer: "content" },
+                    { question: "rapide", answer: "vite" },
+                    { question: "beau", answer: "joli" },
+                    { question: "grand", answer: "immense" },
+                    { question: "petit", answer: "minuscule" },
+                    { question: "facile", answer: "simple" },
+                    { question: "difficile", answer: "compliqué" },
+                    { question: "ami", answer: "copain" },
+                    { question: "parler", answer: "discuter" },
+                    { question: "começar", answer: "débuter" }
+                ],
+                antonym: [
+                    { question: "haut", answer: "bas" },
+                    { question: "heureux", answer: "triste" },
+                    { question: "rapide", answer: "lent" },
+                    { question: "facile", answer: "difficile" },
+                    { question: "grand", answer: "pequeno" },
+                    { question: "nouveau", answer: "vieux" },
+                    { question: "chaud", answer: "froid" },
+                    { question: "dur", answer: "mou" },
+                    { question: "propre", answer: "sale" },
+                    { question: "près", answer: "longe" }
+                ],
+                definition: [
+                    { question: "Animal qui fait miaou", answer: "chat" },
+                    { question: "Lieu où les enfants étudient", answer: "école" },
+                    { question: "Personne qui enseigne", answer: "professeur" },
+                    { question: "Fruit jaune et courbé", answer: "banane" },
+                    { question: "Véhicule à quatre roues", answer: "voiture" },
+                    { question: "Aparelho pour telefonar", answer: "téléphone" },
+                    { question: "Nourriture liquide", answer: "soupe" },
+                    { question: "Lugar où on achète de la nourriture", answer: "supermarché" },
+                    { question: "Pessoa que soigne les malades", answer: "docteur" },
+                    { question: "Bâtiment où tu habites", answer: "maison" }
+                ],
+                translation: [
+                    { question: "house", answer: "maison" },
+                    { question: "dog", answer: "chien" },
+                    { question: "cat", answer: "chat" },
+                    { question: "car", answer: "voiture" },
+                    { question: "book", answer: "livre" },
+                    { question: "school", answer: "école" },
+                    { question: "friend", answer: "amigo" },
+                    { question: "water", answer: "eau" },
+                    { question: "food", answer: "nourriture" },
+                    { question: "sun", answer: "soleil" }
+                ]
+            },
+            chinese: {
+                gapped: [
+                    { question: '猫___在垫子上。', answer: '坐' },
+                    { question: '我们___去公园。', answer: '去' },
+                    { question: '她___一封信。', answer: '写' },
+                    { question: '狗___得很大声。', answer: '叫' },
+                    { question: '你___门。', answer: '开' },
+                    { question: '他们___足球。', answer: '踢' },
+                    { question: '我___水。', answer: '喝' },
+                    { question: '您___得早。', answer: '到' },
+                    { question: '太阳___在东边。', answer: '升起' },
+                    { question: '鸟___在天空中。', answer: '飞' }
+                ],
+                idiom: [
+                    { question: '画蛇添足', answer: '多此一举' },
+                    { question: '对牛弹琴', answer: '白费力气' },
+                    { question: '井底之蛙', answer: '见识少的人' },
+                    { question: '一箭双雕', answer: '一举两得' },
+                    { question: '亡羊补牢', answer: '及时补救' },
+                    { question: '狐假虎威', answer: '仗势欺人' },
+                    { question: '自相矛盾', answer: '说话前后不一致' },
+                    { question: '画龙点睛', answer: '关键点' },
+                    { question: '掩耳盗铃', answer: '自欺欺人' },
+                    { question: '守株待兔', answer: '不主动' }
+                ],
+                synonym: [
+                    { question: '高兴', answer: '快乐' },
+                    { question: '快速', answer: '迅速' },
+                    { question: '漂亮', answer: '美丽' },
+                    { question: '大', answer: '巨大' },
+                    { question: '小', answer: '微小' },
+                    { question: '容易', answer: '简单' },
+                    { question: '困难', answer: '艰难' },
+                    { question: '朋友', answer: '伙伴' },
+                    { question: '说', answer: '讲' },
+                    { question: '开始', answer: '起始' }
+                ],
+                antonym: [
+                    { question: '高', answer: '低' },
+                    { question: '高兴', answer: '难过' },
+                    { question: '快', answer: '慢' },
+                    { question: '容易', answer: '困难' },
+                    { question: '大', answer: '小' },
+                    { question: '新', answer: '旧' },
+                    { question: '热', answer: '冷' },
+                    { question: '硬', answer: '软' },
+                    { question: '干净', answer: '脏' },
+                    { question: '近', answer: '远' }
+                ],
+                definition: [
+                    { question: '会叫的动物', answer: '狗' },
+                    { question: '孩子们学习的地方', answer: '学校' },
+                    { question: '教书的人', answer: '老师' },
+                    { question: '黄色弯曲的水果', answer: '香蕉' },
+                    { question: '有四个轮子的交通工具', answer: '汽车' },
+                    { question: '用来打电话的设备', answer: '电话' },
+                    { question: '液体食物', answer: '汤' },
+                    { question: '买食物的地方', answer: '超市' },
+                    { question: '给病人看病的人', answer: '医生' },
+                    { question: '你住的建筑', answer: '房子' }
+                ],
+                translation: [
+                    { question: 'house', answer: '房子' },
+                    { question: 'dog', answer: '狗' },
+                    { question: 'cat', answer: '猫' },
+                    { question: 'car', answer: '汽车' },
+                    { question: 'book', answer: '书' },
+                    { question: 'school', answer: '学校' },
+                    { question: 'friend', answer: '朋友' },
+                    { question: 'water', answer: '水' },
+                    { question: 'food', answer: '食物' },
+                    { question: 'sun', answer: '太阳' }
+                ]
+            },
+            tamil: {
+                gapped: [
+                    { question: 'பூனை ___ மேடையில் உள்ளது.', answer: 'உட்கார்கிறது' },
+                    { question: 'நாம் ___ பூங்காவிற்கு செல்கிறோம்.', answer: 'செல்கிறோம்' },
+                    { question: 'அவள் ___ ஒரு கடிதம்.', answer: 'எழுதுகிறாள்' },
+                    { question: 'நாய் ___ சத்தமாக.', answer: 'அழுகிறது' },
+                    { question: 'நீ ___ கதவை.', answer: 'திறக்கிறாய்' },
+                    { question: 'அவர்கள் ___ கால்பந்து விளையாடுகிறார்கள்.', answer: 'விளையாடுகிறார்கள்' },
+                    { question: 'நான் ___ தண்ணீர்.', answer: 'குடிக்கிறேன்' },
+                    { question: 'நீங்கள் ___ விரைவாக.', answer: 'வருகிறீர்கள்' },
+                    { question: 'சூரியன் ___ கிழக்கில்.', answer: 'உயிர்கிறது' },
+                    { question: 'பறவைகள் ___ வானில்.', answer: 'பறக்கின்றன' }
+                ],
+                idiom: [
+                    { question: 'கடலை போடு', answer: 'பொய் பேசு' },
+                    { question: 'கண்ணில் மண் போட்டல்', answer: 'ஏமாற்று' },
+                    { question: 'கடுகு அளவு', answer: 'மிகவும் சிறியது' },
+                    { question: 'மழை பெய்யும் போது குடை மறக்காதே', answer: 'தயாராக இரு' },
+                    { question: 'மூக்கு நீளமாக இருக்கிறது', answer: 'அதிக ஆவல்' },
+                    { question: 'கடல் போல் பெரிது', answer: 'மிக பெரியது' },
+                    { question: 'கடல் கடந்து செல்ல', answer: 'பெரிய முயற்சி' },
+                    { question: 'கடல் உண்டவன்', answer: 'அறிவாளி' },
+                    { question: 'கடல் போல அமைதி', answer: 'அமைதி' },
+                    { question: 'கடல் போல் ஆழம்', answer: 'ஆழமானது' }
+                ],
+                synonym: [
+                    { question: 'மகிழ்ச்சி', answer: 'இன்பம்' },
+                    { question: 'வேகம்', answer: 'துரிதம்' },
+                    { question: 'அழகு', answer: 'சிறப்பு' },
+                    { question: 'பெரியது', answer: 'விசாலம்' },
+                    { question: 'சிறியது', answer: 'சிறிய' },
+                    { question: 'எளிது', answer: 'சுலபம்' },
+                    { question: 'கடினம்', answer: 'கடுமை' },
+                    { question: 'நண்பன்', answer: 'சகோதரி' },
+                    { question: 'பேசு', answer: 'வார்த்தை' },
+                    { question: 'தொடங்கு', answer: 'ஆரம்பி' }
+                ],
+                antonym: [
+                    { question: 'உயர்', answer: 'தாழ்' },
+                    { question: 'மகிழ்ச்சி', answer: 'துக்கம்' },
+                    { question: 'வேகம்', answer: 'மெதுவாக' },
+                    { question: 'எளிது', answer: 'கடினம்' },
+                    { question: 'பெரியது', answer: 'சிறியது' },
+                    { question: 'புதியது', answer: 'பழையது' },
+                    { question: 'சூடு', answer: 'குளிர்' },
+                    { question: 'கடினம்', answer: 'மென்மை' },
+                    { question: 'சுத்தம்', answer: 'அழுக்கு' },
+                    { question: 'அருகில்', answer: 'தொலைவில்' }
+                ],
+                definition: [
+                    { question: 'மியாவ் என்று அழைக்கும் விலங்கு', answer: 'பூனை' },
+                    { question: 'குழந்தைகள் படிக்கும் இடம்', answer: 'பள்ளி' },
+                    { question: 'படிப்பை கற்றுக்கொடுக்கும் நபர்', answer: 'ஆசிரியர்' },
+                    { question: 'மஞ்சள் வளைந்த பழம்', answer: 'வாழைப்பழம்' },
+                    { question: 'நான்கு சக்கர வாகனம்', answer: 'கார்' },
+                    { question: 'அழைக்கும் கருவி', answer: 'தொலைபேசி' },
+                    { question: 'திரவ உணவு', answer: 'சாறு' },
+                    { question: 'உணவு வாங்கும் இடம்', answer: 'சூப்பர்மார்க்கெட்' },
+                    { question: 'நோயாளிகளை குணப்படுத்தும் நபர்', answer: 'மருத்துவர்' },
+                    { question: 'நீ வாழும் கட்டிடம்', answer: 'வீடு' }
+                ],
+                translation: [
+                    { question: 'house', answer: 'வீடு' },
+                    { question: 'dog', answer: 'நாய்' },
+                    { question: 'cat', answer: 'பூனை' },
+                    { question: 'car', answer: 'கார்' },
+                    { question: 'book', answer: 'புத்தகம்' },
+                    { question: 'school', answer: 'பள்ளி' },
+                    { question: 'friend', answer: 'நண்பன்' },
+                    { question: 'water', answer: 'தண்ணீர்' },
+                    { question: 'food', answer: 'உணவு' },
+                    { question: 'sun', answer: 'சூரியன்' }
+                ]
+            },
+            malay: {
+                gapped: [
+                    { question: 'Kucing ___ di atas tikar.', answer: 'duduk' },
+                    { question: 'Kami ___ ke taman.', answer: 'pergi' },
+                    { question: 'Dia ___ surat.', answer: 'menulis' },
+                    { question: 'Anjing ___ dengan kuat.', answer: 'menyalak' },
+                    { question: 'Kamu ___ pintu.', answer: 'buka' },
+                    { question: 'Mereka ___ bola sepak.', answer: 'bermain' },
+                    { question: 'Saya ___ air.', answer: 'minum' },
+                    { question: 'Anda ___ awal.', answer: 'tiba' },
+                    { question: 'Matahari ___ di timur.', answer: 'terbit' },
+                    { question: 'Burung ___ di langit.', answer: 'terbang' }
+                ],
+                idiom: [
+                    { question: 'Bagai aur dengan tebing', answer: 'Saling membantu' },
+                    { question: 'Bulat air kerana pembetung', answer: 'Bersatu hati' },
+                    { question: 'Harapkan pagar, pagar makan padi', answer: 'Orang yang dipercayai mengkhianati' },
+                    { question: 'Mencurah air ke daun keladi', answer: 'Nasihat yang sia-sia' },
+                    { question: 'Seperti katak di bawah tempurung', answer: 'Kurang pengetahuan' },
+                    { question: 'Bagai menatang minyak yang penuh', answer: 'Menjaga dengan cermat' },
+                    { question: 'Bagai ayam berak kapur', answer: 'Sangat kurus' },
+                    { question: 'Bagai tikus membaiki labu', answer: 'Orang yang merosakkan lagi' },
+                    { question: 'Bagai bulan dipagari bintang', answer: 'Sangat cantik' }
+                ],
+                synonym: [
+                    { question: 'gembira', answer: 'bahagia' },
+                    { question: 'cepat', answer: 'pantas' },
+                    { question: 'cantik', answer: 'indah' },
+                    { question: 'besar', answer: 'luas' },
+                    { question: 'kecil', answer: 'halus' },
+                    { question: 'mudah', answer: 'senang' },
+                    { question: 'sukar', answer: 'payah' },
+                    { question: 'kawan', answer: 'rakan' },
+                    { question: 'bercakap', answer: 'berkata' },
+                    { question: 'mula', answer: 'memulakan' }
+                ],
+                antonym: [
+                    { question: 'tinggi', answer: 'rendah' },
+                    { question: 'gembira', answer: 'sedih' },
+                    { question: 'cepat', answer: 'lambat' },
+                    { question: 'mudah', answer: 'sukar' },
+                    { question: 'besar', answer: 'kecil' },
+                    { question: 'baru', answer: 'lama' },
+                    { question: 'panas', answer: 'sejuk' },
+                    { question: 'keras', answer: 'lembut' },
+                    { question: 'bersih', answer: 'kotor' },
+                    { question: 'dekat', answer: 'jauh' }
+                ],
+                definition: [
+                    { question: 'Haiwan yang berbunyi meow', answer: 'kucing' },
+                    { question: 'Tempat kanak-kanak belajar', answer: 'sekolah' },
+                    { question: 'Orang yang mengajar', answer: 'guru' },
+                    { question: 'Buah kuning yang melengkung', answer: 'pisang' },
+                    { question: 'Véhicule à quatre roues', answer: 'voiture' },
+                    { question: 'Aparelho untuk telefon', answer: 'telefon' },
+                    { question: 'Nourriture liquide', answer: 'sup' },
+                    { question: 'Tempat membeli makanan', answer: 'pasar raya' },
+                    { question: 'Orang yang merawat pesakit', answer: 'doktor' },
+                    { question: 'Bangunan tempat tinggal', answer: 'rumah' }
+                ],
+                translation: [
+                    { question: 'house', answer: 'rumah' },
+                    { question: 'dog', answer: 'anjing' },
+                    { question: 'cat', answer: 'kucing' },
+                    { question: 'car', answer: 'mobil' },
+                    { question: 'book', answer: 'buku' },
+                    { question: 'school', answer: 'sekolah' },
+                    { question: 'friend', answer: 'kawan' },
+                    { question: 'water', answer: 'air' },
+                    { question: 'food', answer: 'makanan' },
+                    { question: 'sun', answer: 'matahari' }
+                ]
+            },
+            portuguese: {
+                gapped: [
+                    { question: 'O gato ___ no tapete.', answer: 'senta' },
+                    { question: 'Nós ___ ao parque.', answer: 'vamos' },
+                    { question: 'Ela ___ uma carta.', answer: 'escreve' },
+                    { question: 'O cachorro ___ alto.', answer: 'late' },
+                    { question: 'Você ___ a porta.', answer: 'abre' },
+                    { question: 'Eles ___ futebol.', answer: 'jogam' },
+                    { question: 'Eu ___ água.', answer: 'bebo' },
+                    { question: 'Você ___ cedo.', answer: 'chega' },
+                    { question: 'O sol ___ no leste.', answer: 'nasce' },
+                    { question: 'Os pássaros ___ no céu.', answer: 'voam' }
+                ],
+                idiom: [
+                    { question: 'Chover canivete', answer: 'Chover muito forte' },
+                    { question: 'Fazer vista grossa', answer: 'Ignorar algo' },
+                    { question: 'Pé de meia', answer: 'Economia' },
+                    { question: "Fazer tempestade em copo d'água", answer: 'Exagerar um problema pequeno' },
+                    { question: 'Estar com a pulga atrás da orelha', answer: 'Desconfiar' },
+                    { question: 'Pôr a mão no fogo', answer: 'Confiar totalmente' },
+                    { question: 'Falar pelos cotovelos', answer: 'Falar muito' },
+                    { question: 'Quebrar o galho', answer: 'Ajudar' },
+                    { question: "Dar com os burros n'água", answer: 'Fracassar' },
+                    { question: 'Enfiar o pé na jaca', answer: 'Exagerar' }
+                ],
+                synonym: [
+                    { question: 'feliz', answer: 'contente' },
+                    { question: 'rápido', answer: 'vite' },
+                    { question: 'bonito', answer: 'belo' },
+                    { question: 'grande', answer: 'enorme' },
+                    { question: 'pequeno', answer: 'minúsculo' },
+                    { question: 'fácil', answer: 'simples' },
+                    { question: 'difícil', answer: 'compliqué' },
+                    { question: 'amigo', answer: 'copain' },
+                    { question: 'parler', answer: 'discuter' },
+                    { question: 'começar', answer: 'iniciar' }
+                ],
+                antonym: [
+                    { question: 'alto', answer: 'baixo' },
+                    { question: 'feliz', answer: 'triste' },
+                    { question: 'rápido', answer: 'lent' },
+                    { question: 'fácil', answer: 'difícil' },
+                    { question: 'grande', answer: 'pequeno' },
+                    { question: 'novo', answer: 'velho' },
+                    { question: 'chaud', answer: 'frio' },
+                    { question: 'dur', answer: 'mou' },
+                    { question: 'limpo', answer: 'sale' },
+                    { question: 'perto', answer: 'longe' }
+                ],
+                definition: [
+                    { question: 'Animal que mia', answer: 'gato' },
+                    { question: 'Lugar onde as crianças estudam', answer: 'école' },
+                    { question: 'Pessoa que ensina', answer: 'professor' },
+                    { question: 'Fruta amarela e curva', answer: 'banana' },
+                    { question: 'Veículo à quatre roues', answer: 'voiture' },
+                    { question: 'Aparelho para telefonar', answer: 'téléphone' },
+                    { question: 'Nourriture liquida', answer: 'soupe' },
+                    { question: 'Lugar para comprar comida', answer: 'supermarché' },
+                    { question: 'Pessoa que cuida dos doentes', answer: 'médico' },
+                    { question: 'Edifício onde você mora', answer: 'casa' }
+                ],
+                translation: [
+                    { question: 'house', answer: 'casa' },
+                    { question: 'dog', answer: 'cachorro' },
+                    { question: 'cat', answer: 'gato' },
+                    { question: 'car', answer: 'carro' },
+                    { question: 'book', answer: 'livro' },
+                    { question: 'school', answer: 'école' },
+                    { question: 'friend', answer: 'amigo' },
+                    { question: 'water', answer: 'água' },
+                    { question: 'food', answer: 'comida' },
+                    { question: 'sun', answer: 'sol' }
+                ]
+            }
+        };
+
+        function renderFlashcards() {
+            const grid = document.getElementById('flashcard-grid');
+            grid.innerHTML = '';
+            if (!flashcards.length) {
+                grid.innerHTML = '<div class="no-cards">No flashcards available for this language/type.</div>';
+                return;
+            }
+            flashcards.forEach((card, idx) => {
+                const cardDiv = document.createElement('div');
+                cardDiv.className = 'flashcard';
+                let optionsHtml = '';
+                if (card.options && card.options.length) {
+                    optionsHtml = `<ul class="options-list">${card.options.map(opt => `<li class="option">${opt}</li>`).join('')}</ul>`;
+                }
+                cardDiv.innerHTML = `
+                    <div class="type-label">${capitalize(currentType)}</div>
+                    <div class="flashcard-inner front">
+                        <div class="flashcard-question">${card.question}</div>
+                        ${optionsHtml}
+                    </div>
+                    <div class="flashcard-inner back">
+                        <div style="font-size:1.1rem; font-weight:600; margin-bottom:0.7rem;">Answer</div>
+                        <div style="font-size:1.2rem; color:#fff;">${card.answer}</div>
+                    </div>
+                `;
+                cardDiv.onclick = function(e) {
+                    // Only flip if not clicking an option
+                    if (e.target.classList.contains('option')) return;
+                    cardDiv.classList.toggle('flipped');
+                };
+                // Optionally: allow user to select an option and highlight if correct
+                cardDiv.querySelectorAll('.option').forEach(optEl => {
+                    optEl.onclick = function(ev) {
+                        ev.stopPropagation();
+                        cardDiv.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+                        optEl.classList.add('selected');
+                        if (optEl.textContent.trim() === card.answer.trim()) {
+                            optEl.style.background = '#27ae60';
+                            optEl.style.color = '#fff';
+                        } else {
+                            optEl.style.background = '#e74c3c';
+                            optEl.style.color = '#fff';
+                        }
+                    };
+                });
+                grid.appendChild(cardDiv);
+            });
+        }
+
+        function fetchFlashcards(lang, type) {
+            if (type === 'quiz') {
+                fetch(`/get_flashcards/${lang}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        flashcards = data;
+                        renderFlashcards();
+                    });
+            } else {
+                // Use static data for other types
+                if (staticFlashcardData[lang] && staticFlashcardData[lang][type]) {
+                    flashcards = staticFlashcardData[lang][type].map(card => ({ ...card, options: [] }));
+                } else {
+                    flashcards = [];
+                }
+                renderFlashcards();
+            }
+        }
+
+        function capitalize(str) {
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+
+        document.getElementById('language-select').onchange = function(e) {
+            currentLanguage = e.target.value;
+            fetchFlashcards(currentLanguage, currentType);
+        };
+        document.getElementById('type-select').onchange = function(e) {
+            currentType = e.target.value;
+            fetchFlashcards(currentLanguage, currentType);
+        };
+
+        // Initial load
+        fetchFlashcards(currentLanguage, currentType);
+    </script>
+</body>
+</html> 

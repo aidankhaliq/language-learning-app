@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>User Dashboard - Language Learning Chatbot</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        body {
+            min-height: 100vh;
+            margin: 0;
+            font-family: 'Poppins', Arial, sans-serif;
+            background: #f4f7fb;
+            color: #222;
+        }
+        body.dark-mode {
+            background: linear-gradient(135deg, #181f2a 0%, #232946 100%) !important;
+            color: #fff !important;
+        }
+        body.dark-mode .dashboard-card, body.dark-mode .stats-card {
+            background: #232946 !important;
+            color: #fff !important;
+            box-shadow: 0 2px 16px rgba(67,97,238,0.18);
+        }
+        body.dark-mode .stat-box {
+            background: #232946 !important;
+            color: #fff !important;
+            border: 1.5px solid #353b4a;
+        }
+        body.dark-mode .language-item {
+            background: #232946 !important;
+            color: #fff !important;
+            border: 2px solid #353b4a;
+        }
+        body.dark-mode .language-item.selected, body.dark-mode .language-item:hover {
+            background: #353b4a !important;
+            border: 2px solid #43c6ac !important;
+            color: #43c6ac !important;
+        }
+        body.dark-mode .dashboard-title {
+            color: #ff6fcb !important;
+        }
+        body.dark-mode .dashboard-subtitle, body.dark-mode .section-title {
+            color: #e88b8b !important;
+        }
+        body.dark-mode .dashboard-btn {
+            color: #fff !important;
+            filter: brightness(1.1);
+        }
+        body.dark-mode .dashboard-btn.settings {
+            background: #ffc107 !important;
+            color: #232946 !important;
+        }
+        body.dark-mode .dashboard-btn.logout {
+            background: #e64980 !important;
+        }
+        body.dark-mode .dashboard-btn.success {
+            background: #43c6ac !important;
+            color: #232946 !important;
+        }
+        body.dark-mode .dashboard-btn.accent {
+            background: #4895ef !important;
+        }
+        body.dark-mode .progress-bar {
+            background: #232946 !important;
+        }
+        body.dark-mode .progress-fill {
+            background: linear-gradient(90deg, #43c6ac, #43e97b) !important;
+        }
+        body.dark-mode .progress-label {
+            color: #bdbdbd !important;
+        }
+        body.dark-mode .achievements-section {
+            background: #232946 !important;
+            color: #fff !important;
+            box-shadow: 0 1px 4px rgba(67,97,238,0.10);
+        }
+        body.dark-mode .achievement-card {
+            background: #232946 !important;
+            color: #fff !important;
+            box-shadow: 0 1px 4px rgba(67,97,238,0.13);
+        }
+        body.dark-mode .achievements-title {
+            color: #43c6ac !important;
+        }
+        body.dark-mode .stat-label {
+            color: #bdbdbd !important;
+        }
+        body.dark-mode .top-bar {
+            background: #181f2a !important;
+            color: #fff !important;
+            box-shadow: 0 2px 8px rgba(67,97,238,0.10);
+        }
+        body.dark-mode .notification-bell {
+            background: #e64980 !important;
+            color: #fff !important;
+        }
+        body.dark-mode .sidebar-btn {
+            background: #ff6fcb !important;
+            color: #232946 !important;
+        }
+        body.dark-mode .nav-link {
+            color: #bdbdbd !important;
+        }
+        body.dark-mode .nav-link:hover, body.dark-mode .nav-link:focus {
+            background: #232946 !important;
+            box-shadow: 0 0 12px 2px #43c6ac55;
+            color: #43c6ac !important;
+        }
+        body.dark-mode #sidebar {
+            background: #232946 !important;
+            color: #fff !important;
+        }
+        body.dark-mode #sidebar .nav-link {
+            color: #bdbdbd !important;
+        }
+        body.dark-mode #sidebar .nav-link:hover, body.dark-mode #sidebar .nav-link:focus {
+            background: #353b4a !important;
+            color: #43c6ac !important;
+        }
+        body.dark-mode #sidebarOverlay {
+            background: rgba(44,44,44,0.55) !important;
+        }
+        .top-bar {
+            width: 100%;
+            height: 64px;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(67,97,238,0.04);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            padding: 0 32px;
+        }
+        .sidebar-btn {
+            background: #4361ee;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(67,97,238,0.08);
+        }
+        .sidebar-btn:active { filter: brightness(0.95); }
+        .top-bar-right {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+        .notification-bell {
+            background: #e64980;
+            color: #fff;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            box-shadow: 0 2px 8px rgba(67,97,238,0.08);
+            position: relative;
+        }
+        .toggle-switch {
+            width: 48px;
+            height: 24px;
+            background: #e9ecef;
+            border-radius: 12px;
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+        .toggle-switch input {
+            display: none;
+        }
+        .toggle-slider {
+            position: absolute;
+            left: 2px;
+            top: 2px;
+            width: 20px;
+            height: 20px;
+            background: #fff;
+            border-radius: 50%;
+            transition: left 0.2s;
+            box-shadow: 0 1px 4px rgba(67,97,238,0.10);
+        }
+        .toggle-switch input:checked + .toggle-slider {
+            left: 26px;
+            background: #4361ee;
+        }
+        .dashboard-main {
+            max-width: 1100px;
+            margin: 32px auto 0 auto;
+            padding: 0 16px 32px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 32px;
+        }
+        .dashboard-card, .stats-card {
+            background: #fff;
+            border-radius: 18px;
+            padding: 32px 32px 28px 32px;
+            box-shadow: 0 2px 16px rgba(67,97,238,0.08);
+            width: 100%;
+        }
+        .dashboard-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #e64980;
+            margin-bottom: 8px;
+            text-align: left;
+        }
+        .dashboard-subtitle {
+            color: #e88b8b;
+            font-size: 1.1rem;
+            margin-bottom: 24px;
+            text-align: left;
+        }
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 18px;
+            color: #222;
+            text-align: left;
+        }
+        .language-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 18px;
+            margin-bottom: 24px;
+        }
+        .language-item {
+            background: #f6f8fc;
+            border: 2px solid transparent;
+            border-radius: 10px;
+            width: 110px;
+            height: 90px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: border 0.2s, background 0.2s;
+        }
+        .language-item.selected, .language-item:hover {
+            border: 2px solid #4361ee;
+            background: #eaf0ff;
+        }
+        .lang-code {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #4361ee;
+        }
+        .lang-name {
+            font-size: 0.95rem;
+            color: #6c757d;
+        }
+        .dashboard-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 0;
+        }
+        .dashboard-btn {
+            border: none;
+            border-radius: 8px;
+            padding: 10px 18px;
+            font-size: 1rem;
+            font-weight: 500;
+            color: #fff;
+            background: #4361ee;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+        .dashboard-btn.accent { background: #4895ef; }
+        .dashboard-btn.success { background: #2ecc71; }
+        .dashboard-btn.settings { background: #ffc107; color: #222; }
+        .dashboard-btn.logout { background: #e64980; }
+        .dashboard-btn:hover { filter: brightness(0.95); }
+        .stats-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 18px;
+            color: #222;
+            text-align: left;
+        }
+        .stats-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+        .stat-box {
+            flex: 1 1 150px;
+            background: #f6f8fc;
+            border-radius: 12px;
+            padding: 18px 0 10px 0;
+            text-align: center;
+            min-width: 120px;
+        }
+        .progress-bar {
+            height: 12px;
+            background: #e9ecef;
+            border-radius: 7px;
+            overflow: hidden;
+            margin-top: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #43c6ac, #4361ee);
+            border-radius: 7px;
+            transition: width 0.5s;
+        }
+        .progress-label {
+            color: #888;
+            font-size: 0.98rem;
+            margin-bottom: 0.5rem;
+        }
+        .achievements-section {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: #f7fafd;
+            border-radius: 10px;
+            box-shadow: 0 1px 4px rgba(67,97,238,0.04);
+        }
+        .achievements-title {
+            font-weight: 700;
+            color: #4361ee;
+            margin-bottom: 0.7rem;
+            font-size: 1.1rem;
+        }
+        .achievements-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.7rem;
+        }
+        .achievement-card {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 1px 4px rgba(67,97,238,0.07);
+            padding: 0.7rem 1rem;
+            min-width: 110px;
+            text-align: center;
+            font-size: 0.95rem;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.2rem;
+        }
+        .achievement-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.2rem;
+        }
+        @media (max-width: 1200px) {
+            .dashboard-main { max-width: 98vw; }
+        }
+        @media (max-width: 700px) {
+            .dashboard-main { padding: 0 2vw; }
+            .dashboard-card, .stats-card { padding: 10px 4px 10px 4px; }
+            .language-list, .stats-row { gap: 8px; }
+            .language-item { width: 90px; height: 70px; font-size: 1rem; }
+            .dashboard-title { font-size: 1.3rem; }
+            .top-bar { padding: 0 8px; }
+        }
+        .nav-link {
+            transition: background 0.2s, box-shadow 0.2s;
+            position: relative;
+        }
+        .nav-link:hover, .nav-link:focus {
+            background: #222c3a;
+            box-shadow: 0 0 12px 2px #4361ee55;
+            color: #fff !important;
+            z-index: 1;
+        }
+        .nav-link:active {
+            filter: brightness(0.95);
+        }
+        body.dark-mode .stats-title {
+            color: #fff !important;
+            text-shadow: 0 0 8px #43c6ac, 0 0 16px #43c6ac, 0 0 24px #43c6ac;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <button class="sidebar-btn" aria-label="Open menu">
+            <i class="fas fa-bars"></i>
+        </button>
+        <div class="top-bar-right">
+            <label class="toggle-switch">
+                <input type="checkbox" id="mode-toggle" onclick="toggleDarkMode()" />
+                <span class="toggle-slider"></span>
+            </label>
+            <div class="notification-bell">
+                <i class="fas fa-bell"></i>
+            </div>
+        </div>
+    </div>
+    <div class="dashboard-main">
+        <div class="dashboard-card">
+            <div class="dashboard-title">Welcome to Language Learning Chatbot!</div>
+            <div class="dashboard-subtitle">Select an option below to continue your journey:</div>
+            <div class="section-title">Choose a language to practice:</div>
+            <div class="language-list">
+                <div class="language-item selected"><span class="lang-code">US</span><span class="lang-name">English</span></div>
+                <div class="language-item"><span class="lang-code">CN</span><span class="lang-name">Chinese</span></div>
+                <div class="language-item"><span class="lang-code">MY</span><span class="lang-name">Malay</span></div>
+                <div class="language-item"><span class="lang-code">FR</span><span class="lang-name">French</span></div>
+                <div class="language-item"><span class="lang-code">ES</span><span class="lang-name">Spanish</span></div>
+                <div class="language-item"><span class="lang-code">PT</span><span class="lang-name">Portuguese</span></div>
+                <div class="language-item"><span class="lang-code">IN</span><span class="lang-name">Tamil</span></div>
+            </div>
+            <div class="dashboard-actions">
+                <a href="{{ url_for('chatbot') }}" class="dashboard-btn"><i class="fas fa-comments"></i> Chat with Chatbot</a>
+                <a href="{{ url_for('flashcards') }}" class="dashboard-btn accent"><i class="fas fa-layer-group"></i> Practice Flashcards</a>
+                <a href="{{ url_for('progress') }}" class="dashboard-btn success"><i class="fas fa-chart-line"></i> View Progress</a>
+                <a href="{{ url_for('settings') }}" class="dashboard-btn settings"><i class="fas fa-cog"></i> Settings</a>
+                <a href="{{ url_for('logout') }}" class="dashboard-btn logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </div>
+        </div>
+        <div class="stats-card">
+            <div class="stats-title"><i class="fas fa-chart-pie me-2"></i>Your Stats</div>
+            <div class="stats-row">
+                <div class="stat-box">
+                    <div class="stat-value" id="words-learned">0</div>
+                    <div class="stat-label">Words Learned</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="conversation-count">4</div>
+                    <div class="stat-label">Conversations</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="accuracy-rate">0%</div>
+                    <div class="stat-label">Accuracy Rate</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="daily-streak">3</div>
+                    <div class="stat-label">Day Streak 🔥</div>
+                </div>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill" style="width: 1.2%"></div>
+            </div>
+            <div class="progress-label" id="progress-label">1.2% of target</div>
+            <div class="achievements-section">
+                <div class="achievements-title"><i class="fas fa-trophy"></i> Achievements</div>
+                <div class="achievements-grid" id="achievements-grid">
+                    <div style="color:#888; text-align:center; width: 100%;">No achievements yet. Keep learning!</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Sidebar (hidden by default) -->
+    <div id="sidebar" style="position:fixed;top:0;left:0;height:100vh;width:260px;background:#343a40;color:#fff;z-index:2000;transform:translateX(-100%);transition:transform 0.3s cubic-bezier(.77,0,.18,1);box-shadow:2px 0 16px rgba(0,0,0,0.08);display:flex;flex-direction:column;padding-top:2rem;">
+        <button id="closeSidebarBtn" style="position:absolute;top:1.2rem;right:1.2rem;background:none;border:none;color:#fff;font-size:1.5rem;cursor:pointer;z-index:10;">&times;</button>
+        <div style="text-align:center;margin-bottom:1.5rem;">
+            <img src="{{ url_for('static', filename='MMU LOGO.png') }}" alt="MMU Logo" style="width:90px;margin-bottom:0.5rem;" />
+            <h4 style="margin-bottom:0.2rem;font-size:1.2rem;font-weight:600;">Welcome, {{ session['username'] }}!</h4>
+            <p style="font-size:0.95rem;color:#bdbdbd;margin-bottom:0.5rem;">Logged in at: {{ session.get('login_time', 'N/A') }}</p>
+        </div>
+        <ul class="nav flex-column" style="flex:1;padding:0 1rem;">
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard') }}" style="color:#adb5bd;font-size:1.1rem;padding:0.75rem 1.5rem;border-radius:8px;margin-bottom:0.5rem;display:flex;align-items:center;gap:0.75rem;"> <i class="fas fa-home"></i> Dashboard</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('chatbot') }}" style="color:#adb5bd;font-size:1.1rem;padding:0.75rem 1.5rem;border-radius:8px;margin-bottom:0.5rem;display:flex;align-items:center;gap:0.75rem;"> <i class="fas fa-robot"></i> Chatbot</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('flashcards') }}" style="color:#adb5bd;font-size:1.1rem;padding:0.75rem 1.5rem;border-radius:8px;margin-bottom:0.5rem;display:flex;align-items:center;gap:0.75rem;"> <i class="fas fa-layer-group"></i> Flashcards</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('progress') }}" style="color:#adb5bd;font-size:1.1rem;padding:0.75rem 1.5rem;border-radius:8px;margin-bottom:0.5rem;display:flex;align-items:center;gap:0.75rem;"> <i class="fas fa-chart-line"></i> Progress</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('quiz_select') }}" style="color:#adb5bd;font-size:1.1rem;padding:0.75rem 1.5rem;border-radius:8px;margin-bottom:0.5rem;display:flex;align-items:center;gap:0.75rem;"> <i class="fas fa-question-circle"></i> Quiz</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('settings') }}" style="color:#adb5bd;font-size:1.1rem;padding:0.75rem 1.5rem;border-radius:8px;margin-bottom:0.5rem;display:flex;align-items:center;gap:0.75rem;"> <i class="fas fa-cogs"></i> Settings</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('logout') }}" style="color:#adb5bd;font-size:1.1rem;padding:0.75rem 1.5rem;border-radius:8px;margin-bottom:0.5rem;display:flex;align-items:center;gap:0.75rem;"> <i class="fas fa-sign-out-alt"></i> Logout</a></li>
+        </ul>
+    </div>
+    <div id="sidebarOverlay" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(44,44,44,0.35);z-index:1999;opacity:0;pointer-events:none;transition:opacity 0.3s;"></div>
+    <script>
+    // Sidebar functionality
+    const sidebar = document.getElementById('sidebar');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+    const openSidebarBtn = document.querySelector('.sidebar-btn');
+    const closeSidebarBtn = document.getElementById('closeSidebarBtn');
+    openSidebarBtn.onclick = function() {
+        sidebar.style.transform = 'translateX(0)';
+        sidebarOverlay.style.opacity = 1;
+        sidebarOverlay.style.pointerEvents = 'all';
+    };
+    closeSidebarBtn.onclick = function() {
+        sidebar.style.transform = 'translateX(-100%)';
+        sidebarOverlay.style.opacity = 0;
+        sidebarOverlay.style.pointerEvents = 'none';
+    };
+    sidebarOverlay.onclick = closeSidebarBtn.onclick;
+    // Notification bell functionality
+    document.querySelector('.notification-bell').onclick = function() {
+        window.location.href = "{{ url_for('notifications') }}";
+    };
+    // Night mode toggle functionality
+    function setDarkMode(enabled) {
+        if (enabled) {
+            document.body.classList.add('dark-mode');
+            localStorage.setItem('night_mode', 'enabled');
+        } else {
+            document.body.classList.remove('dark-mode');
+            localStorage.removeItem('night_mode');
+        }
+    }
+    function toggleDarkMode() {
+        const enabled = !document.body.classList.contains('dark-mode');
+        setDarkMode(enabled);
+        document.getElementById('mode-toggle').checked = enabled;
+    }
+    // On load, set night mode if enabled
+    window.onload = function() {
+        if (localStorage.getItem('night_mode') === 'enabled') {
+            document.body.classList.add('dark-mode');
+            document.getElementById('mode-toggle').checked = true;
+        }
+        // Language selection interactivity
+        const languageItems = document.querySelectorAll('.language-item');
+        languageItems.forEach(item => {
+            item.addEventListener('click', function() {
+                languageItems.forEach(i => i.classList.remove('selected'));
+                this.classList.add('selected');
+            });
+        });
+    };
+    </script>
+    <script>
+    function updateDashboardStats() {
+        fetch('/get_progress_stats')
+            .then(res => res.json())
+            .then(stats => {
+                document.getElementById('words-learned').textContent = stats.words_learned;
+                document.getElementById('conversation-count').textContent = stats.conversation_count;
+                document.getElementById('accuracy-rate').textContent = stats.accuracy_rate + '%';
+                document.getElementById('progress-fill').style.width = stats.progress_percentage + '%';
+                document.getElementById('progress-label').textContent = stats.progress_percentage.toFixed(1) + '% of target';
+                document.getElementById('daily-streak').textContent = stats.daily_streak;
+                // Achievements
+                const achievementsGrid = document.getElementById('achievements-grid');
+                achievementsGrid.innerHTML = '';
+                if (stats.achievements && stats.achievements.length > 0) {
+                    stats.achievements.forEach(ach => {
+                        const card = document.createElement('div');
+                        card.className = 'achievement-card';
+                        card.innerHTML = `<div class="achievement-icon"><i class="fas fa-trophy"></i></div>` +
+                                          `<div>${ach.achievement_name}</div>` +
+                                          `<div style="font-size:0.85rem;color:#888;">${ach.description}</div>`;
+                        achievementsGrid.appendChild(card);
+                    });
+                } else {
+                    achievementsGrid.innerHTML = '<div style="color:#888; text-align:center; width: 100%;">No achievements yet. Keep learning!</div>';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching dashboard stats:', error);
+            });
+    }
+    // Patch window.onload to also update stats
+    const oldOnload = window.onload;
+    window.onload = function() {
+        if (typeof oldOnload === 'function') oldOnload();
+        updateDashboardStats();
+    };
+    </script>
+</body>
+</html>

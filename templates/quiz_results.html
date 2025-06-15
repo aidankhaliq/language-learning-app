@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Results | Language Learning</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --accent-color: #4895ef;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+        }
+
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .results-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .results-header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .score-card {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            text-align: center;
+        }
+
+        .percentage {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin: 1rem 0;
+            background: linear-gradient(135deg, var(--accent-color), var(--primary-color));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        /* Circular progress chart */
+        .score-circle {
+            width: 150px;
+            height: 150px;
+            margin: 0 auto 1rem;
+        }
+
+        .circular-chart {
+            display: block;
+            margin: 0 auto;
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .circle-bg {
+            fill: none;
+            stroke: #eee;
+            stroke-width: 3.8;
+        }
+
+        .circle {
+            fill: none;
+            stroke-width: 3.8;
+            stroke-linecap: round;
+            stroke: var(--primary-color);
+            animation: progress 1s ease-out forwards;
+        }
+
+        @keyframes progress {
+            0% {
+                stroke-dasharray: 0 100;
+            }
+        }
+
+        .circular-chart .percentage {
+            fill: var(--primary-color);
+            font-size: 0.5em;
+            text-anchor: middle;
+            font-weight: bold;
+            background: none;
+            -webkit-background-clip: initial;
+            background-clip: initial;
+            color: var(--primary-color);
+        }
+
+        /* Score badges */
+        .score-badge {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            margin-top: 1rem;
+            font-weight: 600;
+            animation: fadeIn 1s;
+        }
+
+        .score-badge.excellent {
+            background-color: rgba(40, 167, 69, 0.2);
+            color: #28a745;
+        }
+
+        .score-badge.good {
+            background-color: rgba(0, 123, 255, 0.2);
+            color: #007bff;
+        }
+
+        .score-badge.average {
+            background-color: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+        }
+
+        .score-badge.needs-work {
+            background-color: rgba(220, 53, 69, 0.2);
+            color: #dc3545;
+        }
+
+        /* Stats container */
+        .stats-container {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .stat-item {
+            text-align: center;
+            background: white;
+            border-radius: 10px;
+            padding: 1rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            flex: 1;
+            transition: all 0.3s ease;
+        }
+
+        .stat-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-icon {
+            font-size: 1.5rem;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--dark-color);
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+
+        .points-earned {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .points-earned .display-6 {
+            font-weight: 700;
+        }
+
+        .bonus-breakdown {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .bonus-item {
+            background: rgba(25, 135, 84, 0.1);
+            color: #198754;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .question-result {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            border-left: 4px solid transparent;
+        }
+
+        .question-result.correct {
+            border-left-color: var(--success-color);
+        }
+
+        .question-result.incorrect {
+            border-left-color: var(--danger-color);
+        }
+
+        .correct-answer {
+            color: var(--success-color);
+            font-weight: 600;
+        }
+
+        .incorrect-answer {
+            color: var(--danger-color);
+        }
+
+        .explanation {
+            margin-top: 0.8rem;
+            padding: 0.8rem;
+            background: #f7faff;
+            border-radius: 8px;
+            color: #29487d;
+        }
+
+        .translate-btn {
+            padding: 0.18rem 0.8rem;
+            font-size: 0.93rem;
+            border-radius: 7px;
+            background: #eaf1fb;
+            color: #3b5998;
+            border: 1px solid #3b5998;
+            min-width: unset;
+            width: auto;
+        }
+
+        .translate-btn:hover {
+            background: #3b5998;
+            color: white;
+        }
+
+        .home-btn {
+            position: fixed;
+            top: 1.5rem;
+            left: 1.5rem;
+            background: var(--primary-color);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            z-index: 1000;
+        }
+
+        .home-btn:hover {
+            background: var(--secondary-color);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 768px) {
+            .home-btn {
+                position: static;
+                margin-bottom: 1rem;
+                display: inline-flex;
+            }
+        }
+    </style>
+</head>
+<body style="background: #f8f9fa;">
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-primary" style="position: fixed; top: 2rem; left: 2rem; z-index: 1000; border-radius: 8px; font-weight: 500; padding: 0.5rem 1.2rem;">
+        <i class="fas fa-arrow-left"></i> Dashboard
+    </a>
+    <div class="container" style="max-width: 700px; margin: 0 auto; padding: 2.5rem 0;">
+        <div style="text-align: center; margin-bottom: 2.5rem;">
+            <h2 style="font-weight: 700; color: #222; margin-bottom: 0.2rem;">Quiz Results</h2>
+            <div style="color: #4361ee; font-size: 1.1rem; font-weight: 500;">{{ language }} <span style="color: #888;">|</span> <span style="background: #e3f0ff; color: #4361ee; border-radius: 8px; padding: 0.2rem 1.1rem; font-size: 1rem; font-weight: 600;">{{ difficulty|capitalize }}</span></div>
+        </div>
+        <div class="score-card" style="background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(67,97,238,0.07); margin-bottom: 2.2rem; padding: 2.5rem 2rem 2rem 2rem; text-align: center;">
+            <div class="score-circle" style="margin-bottom: 1.2rem;">
+                <svg viewBox="0 0 36 36" class="circular-chart" style="width: 120px; height: 120px;">
+                    <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" style="stroke: #eee; stroke-width: 3.8; fill: none;" />
+                    <path class="circle" stroke-dasharray="{{ (correct/total*100)|round(0) }}, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" style="stroke: #4361ee; stroke-width: 3.8; fill: none; stroke-linecap: round;" />
+                    <text x="18" y="20.35" class="percentage" style="fill: #4361ee; font-size: 0.5em; text-anchor: middle; font-weight: bold;">{{ (correct/total*100)|round(0) }}%</text>
+                </svg>
+            </div>
+            <div style="font-size: 1.15rem; color: #222; margin-bottom: 0.7rem;">You scored <strong>{{ correct }}</strong> out of <strong>{{ total }}</strong></div>
+            <button class="btn btn-warning" style="font-weight: 600; border-radius: 8px; margin-top: 0.7rem; background: #fffbe6; color: #bfa100; border: none;">&#10003; Keep Practicing!</button>
+        </div>
+        <div class="row" style="margin-bottom: 2.2rem;">
+            <div class="col-md-4 mb-3 mb-md-0">
+                <div class="stat-item" style="background: #fff; border-radius: 12px; box-shadow: 0 4px 15px rgba(67,97,238,0.07); text-align: center; padding: 1.5rem 0;">
+                    <div class="stat-icon" style="font-size: 1.7rem; color: #4361ee; margin-bottom: 0.5rem;"><i class="fas fa-bolt"></i></div>
+                    <div class="stat-value" style="font-size: 1.5rem; font-weight: 700; color: #222;">{{ total_points }}</div>
+                    <div class="stat-label" style="font-size: 1rem; color: #888;">Points Earned</div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3 mb-md-0">
+                <div class="stat-item" style="background: #fff; border-radius: 12px; box-shadow: 0 4px 15px rgba(67,97,238,0.07); text-align: center; padding: 1.5rem 0;">
+                    <div class="stat-icon" style="font-size: 1.7rem; color: #4361ee; margin-bottom: 0.5rem;"><i class="fas fa-fire"></i></div>
+                    <div class="stat-value" style="font-size: 1.5rem; font-weight: 700; color: #222;">{{ streak }}</div>
+                    <div class="stat-label" style="font-size: 1rem; color: #888;">Streak</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-item" style="background: #fff; border-radius: 12px; box-shadow: 0 4px 15px rgba(67,97,238,0.07); text-align: center; padding: 1.5rem 0;">
+                    <div class="stat-icon" style="font-size: 1.7rem; color: #4361ee; margin-bottom: 0.5rem;"><i class="fas fa-clock"></i></div>
+                    <div class="stat-value" style="font-size: 1.5rem; font-weight: 700; color: #222;">{{ time_taken }}s</div>
+                    <div class="stat-label" style="font-size: 1rem; color: #888;">Time Taken</div>
+                </div>
+            </div>
+        </div>
+        <div class="points-earned" style="background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(67,97,238,0.07); text-align: center; padding: 2rem 1.5rem; margin-bottom: 2.2rem;">
+            <h5 style="font-weight: 600; color: #4361ee;"><i class="fas fa-coins me-2"></i>Points Breakdown</h5>
+            <p class="display-6 text-primary" style="font-weight: 700; font-size: 2rem; color: #4361ee;">+{{ total_points }} pts</p>
+            <div class="bonus-breakdown" style="display: flex; justify-content: center; gap: 1rem; margin-top: 1rem;">
+                <div class="bonus-item" style="background: #e3f0ff; color: #4361ee; padding: 0.5rem 1.2rem; border-radius: 50px; font-size: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-check-circle"></i>
+                    <span>{{ points }} base points</span>
+                </div>
+                {% if bonus > 0 %}
+                <div class="bonus-item" style="background: #fffbe6; color: #bfa100; padding: 0.5rem 1.2rem; border-radius: 50px; font-size: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-bolt"></i>
+                    <span>+{{ bonus }} bonus</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <h3 class="mb-3">Question Review</h3>
+
+        {% for r in review %}
+        <div class="question-result {% if r.is_correct %}correct{% else %}incorrect{% endif %}">
+            <h3>Question {{ loop.index }}: {{ r.question }}</h3>
+
+            {% if language != 'English' %}
+            <button type="button" class="translate-btn" data-qid="{{ loop.index }}" 
+                    data-question="{{ r.question|escape }}" 
+                    data-type="{{ r.type }}" 
+                    data-explanation="{{ r.options.explanation|default('')|escape }}" 
+                    data-user-answer="{{ r.user_answer|escape }}" 
+                    data-correct-answer="{{ r.correct_answer|escape }}">
+                <i class="fas fa-language me-1"></i>Translate
+            </button>
+            {% endif %}
+
+            <div id="translation-{{ loop.index }}" class="mt-2" style="color: #008060; font-style: italic;"></div>
+
+            <p><strong>Your answer:</strong>
+                <span class="{% if not r.is_correct %}incorrect-answer{% endif %}">
+                    {% if r.type == 'word_matching' %}
+                    <pre style="display:inline; white-space: pre-wrap; word-break: break-all;">{{ r.user_answer }}</pre>
+                    {% else %}
+                    {{ r.user_answer or "Not answered" }}
+                    {% endif %}
+                </span>
+            </p>
+
+            <p><strong>Correct answer:</strong>
+                <span class="correct-answer">
+                    {% if r.type == 'word_matching' %}
+                    <pre style="display:inline; white-space: pre-wrap; word-break: break-all;">{{ r.correct_answer }}</pre>
+                    {% else %}
+                    {{ r.correct_answer }}
+                    {% endif %}
+                </span>
+            </p>
+
+            {% if r.type == 'error_spotting' or r.type == 'idiom_interpretation' or r.type == 'cultural_nuances' %}
+                {% if r.options and r.options.explanation %}
+                <div class="explanation">
+                    <strong>Explanation:</strong> {{ r.options.explanation }}
+                </div>
+                {% endif %}
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        <div class="text-center mt-4">
+            <a href="{{ url_for('quiz_select') }}" class="btn btn-primary">
+                <i class="fas fa-redo me-2"></i>Take Another Quiz
+            </a>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.translate-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const qid = btn.getAttribute('data-qid');
+                const questionText = btn.getAttribute('data-question');
+                const type = btn.getAttribute('data-type');
+                const explanation = btn.getAttribute('data-explanation');
+                const userAnswer = btn.getAttribute('data-user-answer');
+                const correctAnswer = btn.getAttribute('data-correct-answer');
+                let textToTranslate = questionText;
+                if (type === 'error_spotting' && explanation) {
+                    textToTranslate += '\n\nExplanation: ' + explanation;
+                }
+                translateQuestion(qid, textToTranslate);
+            });
+        });
+
+        function translateQuestion(qid, textToTranslate) {
+            const translationDiv = document.getElementById('translation-' + qid);
+            translationDiv.textContent = 'Translating...';
+            fetch('/translate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ text: textToTranslate + '\n\nPlease provide a short, simple translation suitable for a language learner.' }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                translationDiv.textContent = data.translation || 'Translation unavailable.';
+            })
+            .catch(() => {
+                translationDiv.textContent = 'Translation failed.';
+            });
+        }
+    });
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

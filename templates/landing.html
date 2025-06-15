@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LanguaMate - Learn Languages with AI Conversations</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f7f9fc;
+            margin: 0;
+            padding: 0;
+            color: #222;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 32px 48px 0 48px;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: #222;
+        }
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: #7b61ff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+        }
+        .logo-icon span {
+            color: #fff;
+            font-size: 1.3rem;
+        }
+        .header-buttons a {
+            text-decoration: none;
+            margin-left: 16px;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: background 0.2s;
+        }
+        .header-buttons .sign-in {
+            background: #fff;
+            color: #222;
+            border: 1px solid #e0e0e0;
+        }
+        .header-buttons .get-started {
+            background: #7b61ff;
+            color: #fff;
+            border: none;
+        }
+        .header-buttons .nav-link {
+            background: none;
+            color: #7b61ff;
+            border: none;
+            padding: 10px 18px;
+            font-weight: 600;
+            font-size: 1rem;
+            text-decoration: none;
+            margin-left: 0;
+            margin-right: 8px;
+            transition: color 0.2s;
+        }
+        .header-buttons .nav-link:hover {
+            color: #4f8cff;
+            text-decoration: underline;
+        }
+        .main {
+            text-align: center;
+            margin-top: 60px;
+        }
+        .main h1 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        .main h1 .highlight {
+            color: #7b61ff;
+        }
+        .main p {
+            font-size: 1.2rem;
+            color: #555;
+            margin-bottom: 2.5rem;
+        }
+        .main .cta-buttons {
+            margin-bottom: 3rem;
+        }
+        .main .cta-buttons a {
+            text-decoration: none;
+            margin: 0 10px;
+            padding: 14px 32px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: background 0.2s;
+        }
+        .main .cta-buttons .start-learning {
+            background: #4f8cff;
+            color: #fff;
+        }
+        .main .cta-buttons .watch-demo {
+            background: #fff;
+            color: #222;
+            border: 1px solid #e0e0e0;
+        }
+        .features {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin: 0 auto 60px auto;
+            max-width: 1100px;
+        }
+        .feature-card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(80, 80, 180, 0.06);
+            padding: 32px 28px;
+            flex: 1 1 0;
+            min-width: 260px;
+            max-width: 340px;
+            text-align: center;
+        }
+        .feature-icon {
+            width: 56px;
+            height: 56px;
+            margin: 0 auto 18px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: #f2f0ff;
+            font-size: 2rem;
+            color: #7b61ff;
+        }
+        .feature-card h3 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        .feature-card p {
+            color: #555;
+            font-size: 1rem;
+        }
+        @media (max-width: 900px) {
+            .features {
+                flex-direction: column;
+                gap: 24px;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">
+            <div class="logo-icon"><span>🌐</span></div>
+            LanguaMate
+        </div>
+        <div class="header-buttons">
+            <a href="{{ url_for('services') }}" class="nav-link">Services</a>
+            <a href="{{ url_for('contact') }}" class="nav-link">Contact Us</a>
+            <a href="{{ url_for('login') }}" class="sign-in">Sign In</a>
+            <a href="{{ url_for('register') }}" class="get-started">Get Started</a>
+        </div>
+    </div>
+    <div class="main">
+        <h1>Learn Languages with <span class="highlight">AI Conversations</span></h1>
+        <p>Master any language through natural conversations with our AI chatbot. Practice speaking, get instant feedback, and build confidence in real-world scenarios.</p>
+        <div class="cta-buttons">
+            <a href="{{ url_for('register') }}" class="start-learning">Start Learning Today →</a>
+            <a href="{{ url_for('examples') }}" class="watch-demo">Example of the Website</a>
+        </div>
+        <div class="features">
+            <div class="feature-card">
+                <div class="feature-icon">💬</div>
+                <h3>Natural Conversations</h3>
+                <p>Practice speaking with AI that understands context and responds naturally, just like talking to a native speaker.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📖</div>
+                <h3>Personalized Learning</h3>
+                <p>Get lessons tailored to your level and interests. Our AI adapts to your learning style and pace for maximum progress.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🧑‍🤝‍🧑</div>
+                <h3>Flashcards</h3>
+                <p>Practice vocabulary and grammar with interactive flashcards. Add your own words, track your progress, and review with spaced repetition.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

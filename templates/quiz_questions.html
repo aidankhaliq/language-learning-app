@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ language }} Quiz ({{ difficulty|capitalize }})</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --accent-color: #4895ef;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+        }
+
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .quiz-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .quiz-header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .quiz-header h1 {
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .quiz-header .badge {
+            font-size: 1rem;
+            padding: 0.5rem 1rem;
+            background-color: var(--accent-color);
+        }
+
+        .question-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+
+        .question-card.unanswered {
+            border-left: 4px solid #ff4444;
+            background-color: #fff8f8;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.2); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 68, 68, 0); }
+        }
+
+        .question-card h3 {
+            font-weight: 600;
+            color: var(--dark-color);
+            margin-bottom: 1.5rem;
+        }
+
+        .options {
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .option {
+            display: flex;
+            align-items: center;
+            padding: 1rem 1.25rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid #dee2e6;
+        }
+
+        .option:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+            border-color: var(--accent-color);
+        }
+
+        .option input[type="radio"] {
+            margin-right: 1rem;
+            transform: scale(1.2);
+            accent-color: var(--primary-color);
+        }
+
+        .option-label {
+            flex: 1;
+            cursor: pointer;
+        }
+
+        .submit-btn {
+            background: var(--primary-color);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: block;
+            width: 100%;
+            max-width: 300px;
+            margin: 2.5rem auto 0;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(67, 97, 238, 0.3);
+        }
+
+        .submit-btn:hover {
+            background: var(--secondary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(67, 97, 238, 0.4);
+        }
+
+        .submit-btn:disabled {
+            background: #adb5bd;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .home-btn {
+            position: fixed;
+            top: 1.5rem;
+            left: 1.5rem;
+            background: var(--primary-color);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            z-index: 1000;
+        }
+
+        .home-btn:hover {
+            background: var(--secondary-color);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        /* Word Matching styles */
+        .matching-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .matching-column {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .matching-item {
+            padding: 0.75rem;
+            background: #f8f9fa;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid #dee2e6;
+            position: relative;
+        }
+
+        .matching-item:hover:not(.matched) {
+            background: #e9ecef;
+            transform: translateX(3px);
+        }
+
+        .matching-item.selected {
+            background: #e2f0fd;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px var(--accent-color);
+        }
+
+        .matching-item.matched {
+            background: #d4edda;
+            border-color: #28a745;
+            cursor: default;
+        }
+
+        .matching-item.matched::after {
+            content: "✓";
+            position: absolute;
+            right: 10px;
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .matching-status {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 3px solid var(--accent-color);
+        }
+
+        .matching-status.all-matched {
+            background: #d4edda;
+            border-left-color: #28a745;
+            color: #155724;
+        }
+
+        .matched-pairs {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .matched-pair {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+        }
+
+        .matched-pair .left-item {
+            font-weight: 500;
+            color: var(--primary-color);
+        }
+
+        .matched-pair .right-item {
+            font-weight: 500;
+            color: #28a745;
+        }
+
+        .btn-remove-match {
+            margin-left: auto;
+            background: none;
+            border: none;
+            color: #dc3545;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+        }
+
+        .btn-remove-match:hover {
+            background: rgba(220, 53, 69, 0.1);
+        }
+
+        /* Fill blank styles */
+        .fill-blank-input {
+            padding: 0.5rem;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-size: 1rem;
+            margin-left: 0.5rem;
+            margin-right: 0.5rem;
+        }
+
+        .hint-button {
+            background: none;
+            border: none;
+            color: var(--accent-color);
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin-left: 0.5rem;
+        }
+
+        .hint-text {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-top: 0.5rem;
+            display: none;
+        }
+
+        /* Error spotting styles */
+        .error-sentence {
+            font-style: italic;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 3px solid #ffc107;
+            margin-bottom: 1rem;
+        }
+
+        /* Translation styles */
+        .translate-btn {
+            padding: 0.18rem 0.8rem;
+            font-size: 0.93rem;
+            border-radius: 7px;
+            background: #eaf1fb;
+            color: #3b5998;
+            border: 1px solid #3b5998;
+            min-width: unset;
+            width: auto;
+        }
+
+        .translate-btn:hover {
+            background: #3b5998;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .home-btn {
+                position: static;
+                margin-bottom: 1rem;
+                display: inline-flex;
+            }
+        }
+    </style>
+</head>
+<body style="background: #f8f9fa;">
+    <a href="{{ url_for('quiz_select') }}" class="btn btn-outline-primary" style="position: fixed; top: 2rem; left: 2rem; z-index: 1000; border-radius: 8px; font-weight: 500; padding: 0.5rem 1.2rem;">
+        <i class="fas fa-arrow-left"></i> Back to Quiz Main
+    </a>
+    <div class="container" style="max-width: 700px; margin: 0 auto; padding: 2.5rem 0;">
+        <div style="text-align: center; margin-bottom: 2.5rem;">
+            <h1 style="font-weight: 700; color: #4361ee; margin-bottom: 0.5rem;">{{ language }} Quiz</h1>
+            <span class="badge rounded-pill" style="background: #e3f0ff; color: #4361ee; font-size: 1.1rem; padding: 0.6rem 1.5rem; font-weight: 600;">{{ difficulty|capitalize }}</span>
+        </div>
+        <form action="{{ url_for('quiz_questions') }}" method="post">
+            <input type="hidden" name="language" value="{{ language }}">
+            <input type="hidden" name="difficulty" value="{{ difficulty }}">
+            {% for q in questions %}
+            <div class="question-card" id="question-{{ q.id }}" style="background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(67,97,238,0.07); margin-bottom: 2.2rem; padding: 2rem 2rem 1.5rem 2rem;">
+                <div style="font-size: 1.18rem; font-weight: 600; color: #222; margin-bottom: 1.2rem;">Question {{ loop.index }}: {{ q.question }}</div>
+                {% if language != 'English' %}
+                <button type="button" class="translate-btn" data-qid="{{ q.id }}" data-question="{{ q.question|escape }}" data-type="{{ q.question_type }}" data-explanation="{{ q.options.explanation|default('')|escape }}">
+                    <i class="fas fa-language me-1"></i>Translate
+                </button>
+                {% endif %}
+                <div id="translation-{{ q.id }}" class="mt-2" style="color: #008060; font-style: italic;"></div>
+
+                {% if q.question_type == 'multiple_choice' %}
+                <div class="options">
+                    {% for opt in q.options %}
+                    <label class="option" style="background: #f8f9fa; border-radius: 8px; border: 1.5px solid #dee2e6; padding: 1rem 1.25rem; margin-bottom: 0.7rem; display: flex; align-items: center; cursor: pointer;">
+                        <input type="radio" name="q{{ q.id }}" value="{{ opt }}" required style="margin-right: 1rem; transform: scale(1.2); accent-color: #4361ee;">
+                        <span class="option-label" style="font-size: 1.08rem; color: #222;">{{ opt }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+
+                {% elif q.question_type == 'word_matching' %}
+                <div class="matching-container">
+                    <div class="matching-column">
+                        <div style="font-weight: 600; margin-bottom: 0.5rem;">Left</div>
+                        {% for pair in q.options %}
+                        <div class="matching-item" data-qid="{{ q.id }}" data-left="{{ pair[0] }}">{{ pair[0] }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="matching-column">
+                        <div style="font-weight: 600; margin-bottom: 0.5rem;">Right</div>
+                        {% for pair in q.options %}
+                        <div class="matching-item" data-qid="{{ q.id }}" data-right="{{ pair[1] }}">{{ pair[1] }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div id="matches-{{ q.id }}" class="matched-pairs"></div>
+                <input type="hidden" name="q{{ q.id }}_matches" id="input-matches-{{ q.id }}">
+                <div class="matching-status">
+                    <p>Click items on the left, then click matching items on the right. <span class="matched-count">0</span>/{{ q.options|length }} pairs matched.</p>
+                </div>
+
+                {% elif q.question_type == 'fill_in_the_blanks' %}
+                <div class="fill-blank" style="display: flex; align-items: center; gap: 1rem;">
+                    <input type="text" name="q{{ q.id }}" class="form-control" placeholder="Your answer" required style="max-width: 300px;">
+                    {% if q.options.hint %}
+                    <button type="button" class="btn btn-link text-primary hint-button" onclick="showHint('{{ q.id }}')" style="font-size: 1rem;">Show Hint</button>
+                    <div class="hint-text" id="hint-{{ q.id }}" style="display:none; color:#888; font-size:0.98rem; margin-top:0.5rem;">{{ q.options.hint }}</div>
+                    {% endif %}
+                </div>
+
+                {% elif q.question_type == 'error_spotting' %}
+                <div class="error-sentence" style="font-style: italic; padding: 1rem; background: #f8f9fa; border-radius: 8px; border-left: 3px solid #ffc107; margin-bottom: 1rem;">{{ q.question.split(':')[1] if ':' in q.question else q.question }}</div>
+                <div class="options">
+                    {% for opt in q.options %}
+                    <label class="option" style="background: #f8f9fa; border-radius: 8px; border: 1.5px solid #dee2e6; padding: 1rem 1.25rem; margin-bottom: 0.7rem; display: flex; align-items: center; cursor: pointer;">
+                        <input type="radio" name="q{{ q.id }}" value="{{ opt }}" required style="margin-right: 1rem; transform: scale(1.2); accent-color: #4361ee;">
+                        <span class="option-label" style="font-size: 1.08rem; color: #222;">{{ opt }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+
+                {% else %}
+                <div class="options">
+                    {% for opt in q.options %}
+                    <label class="option">
+                        <input type="radio" name="q{{ q.id }}" value="{{ opt }}" required>
+                        <span class="option-label">{{ opt }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+            <button type="submit" class="submit-btn" style="background: #4361ee; color: #fff; border-radius: 8px; font-weight: 600; font-size: 1.15rem; margin: 2.5rem auto 0 auto; display: block; max-width: 300px; box-shadow: 0 4px 15px rgba(67, 97, 238, 0.18);">Submit Quiz</button>
+        </form>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Word Matching Interactivity
+        const matchStates = {};
+        document.querySelectorAll('.matching-container').forEach(function(container) {
+            const qid = container.querySelector('.matching-item').dataset.qid;
+            matchStates[qid] = { left: null, right: null, matches: [] };
+            const leftItems = container.querySelectorAll('.matching-item[data-left]');
+            const rightItems = container.querySelectorAll('.matching-item[data-right]');
+            const matchesDiv = document.getElementById('matches-' + qid);
+            const inputMatches = document.getElementById('input-matches-' + qid);
+            const statusDiv = container.nextElementSibling.nextElementSibling;
+            const matchedCountEl = statusDiv.querySelector('.matched-count');
+
+            function renderMatches() {
+                matchesDiv.innerHTML = '';
+                matchStates[qid].matches.forEach(function(pair, idx) {
+                    const matchEl = document.createElement('div');
+                    matchEl.className = 'matched-pair';
+                    matchEl.innerHTML = `
+                        <span class="left-item">${pair[0]}</span>
+                        <i class="fas fa-arrow-right mx-2"></i>
+                        <span class="right-item">${pair[1]}</span>
+                        <button type="button" class="btn-remove-match" data-idx="${idx}">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    `;
+                    matchesDiv.appendChild(matchEl);
+                });
+
+                inputMatches.value = JSON.stringify(matchStates[qid].matches);
+                matchedCountEl.textContent = matchStates[qid].matches.length;
+
+                if (matchStates[qid].matches.length === leftItems.length) {
+                    statusDiv.classList.add('all-matched');
+                    statusDiv.querySelector('p').innerHTML = `<strong>All ${matchStates[qid].matches.length} pairs matched!</strong>`;
+                } else {
+                    statusDiv.classList.remove('all-matched');
+                    statusDiv.querySelector('p').innerHTML = `Click items on the left, then click matching items on the right. <span class="matched-count">${matchStates[qid].matches.length}</span>/${leftItems.length} pairs matched.`;
+                }
+            }
+
+            leftItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    if (this.classList.contains('matched')) return;
+                    leftItems.forEach(i => i.classList.remove('selected'));
+                    this.classList.add('selected');
+                    matchStates[qid].left = this.dataset.left;
+                });
+            });
+
+            rightItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    if (!matchStates[qid].left || this.classList.contains('matched')) return;
+                    if (matchStates[qid].matches.length >= leftItems.length) return;
+
+                    const left = matchStates[qid].left;
+                    const right = this.dataset.right;
+
+                    if (matchStates[qid].matches.some(pair => pair[0] === left || pair[1] === right)) return;
+
+                    matchStates[qid].matches.push([left, right]);
+                    matchStates[qid].left = null;
+                    leftItems.forEach(i => i.classList.remove('selected'));
+                    renderMatches();
+                });
+            });
+
+            matchesDiv.addEventListener('click', function(e) {
+                if (e.target.closest('.btn-remove-match')) {
+                    const idx = parseInt(e.target.closest('.btn-remove-match').dataset.idx);
+                    matchStates[qid].matches.splice(idx, 1);
+                    renderMatches();
+                }
+            });
+        });
+
+        // Translation functionality
+        document.querySelectorAll('.translate-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const qid = this.dataset.qid;
+                const questionText = this.dataset.question;
+                const type = this.dataset.type;
+                const explanation = this.dataset.explanation;
+                let textToTranslate = questionText;
+                if (type === 'error_spotting' && explanation) {
+                    textToTranslate += '\n\nExplanation: ' + explanation;
+                }
+                translateQuestion(qid, textToTranslate);
+            });
+        });
+
+        function translateQuestion(qid, textToTranslate) {
+            const translationDiv = document.getElementById('translation-' + qid);
+            translationDiv.textContent = 'Translating...';
+            fetch('/translate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ text: textToTranslate + '\n\nPlease provide a short, simple translation suitable for a language learner.' }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                translationDiv.textContent = data.translation || 'Translation unavailable.';
+            })
+            .catch(() => {
+                translationDiv.textContent = 'Translation failed.';
+            });
+        }
+    });
+
+    function showHint(questionId) {
+        const hintElement = document.getElementById(`hint-${questionId}`);
+        hintElement.style.display = 'block';
+    }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

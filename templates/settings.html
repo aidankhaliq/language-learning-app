@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Settings | Language Learning Assistant</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        body { background: #f8f9fb; font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; }
+        .settings-wrapper { display: flex; min-height: 100vh; }
+        .sidebar {
+            width: 260px; background: #fff; border-right: 1px solid #eee; padding: 40px 0 0 0;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .sidebar .profile-pic { width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 3px solid #e91e63; margin-bottom: 10px; }
+        .sidebar .username { font-weight: 600; margin-bottom: 30px; }
+        .sidebar nav { width: 100%; }
+        .sidebar nav a {
+            display: block; padding: 15px 40px; color: #333; text-decoration: none; font-size: 16px;
+            border-left: 4px solid transparent; transition: background 0.2s, border-color 0.2s;
+        }
+        .sidebar nav a.active, .sidebar nav a:hover { background: #fce4ec; border-left: 4px solid #e91e63; color: #e91e63; }
+        .back-btn { 
+            display: inline-block; margin-bottom: 20px; padding: 10px 20px; background: #e91e63; 
+            color: #fff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 500;
+            border: 1px solid #e91e63; transition: all 0.2s; 
+        }
+        .back-btn:hover { background: #c2185b; color: #fff; border-color: #c2185b; }
+        .back-btn::before { content: '← '; margin-right: 5px; }
+        .settings-content { flex: 1; padding: 50px 60px; background: #f8f9fb; }
+        .settings-card { background: #fff; border-radius: 14px; box-shadow: 0 2px 16px rgba(0,0,0,0.04); padding: 40px 30px 30px 30px; max-width: 700px; margin: 0 auto 40px auto; }
+        .settings-card h2 { margin-top: 0; font-size: 28px; font-weight: 700; color: #222; margin-bottom: 30px; }
+        .form-row { display: flex; gap: 20px; margin-bottom: 20px; }
+        .form-group { flex: 1; display: flex; flex-direction: column; }
+        label { font-size: 14px; color: #888; margin-bottom: 6px; font-weight: 500; }
+        input, select { padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; background: #fafbfc; }
+        input:focus, select:focus { border-color: #e91e63; outline: none; }
+        .avatar-list { display: flex; gap: 10px; margin-top: 10px; }
+        .avatar-list img { width: 48px; height: 48px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: border 0.2s; }
+        .avatar-list img.selected { border: 2px solid #e91e63; }
+        .save-btn { background: #e91e63; color: #fff; border: none; border-radius: 6px; padding: 14px 32px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 20px; transition: background 0.2s; }
+        .save-btn:hover { background: #c2185b; }
+        .danger-zone { background: #fff0f1; border: 1px solid #f8bbd0; border-radius: 10px; padding: 24px; margin-top: 30px; }
+        .danger-zone h3 { color: #c2185b; margin-top: 0; }
+        .danger-btn { background: #c2185b; color: #fff; border: none; border-radius: 6px; padding: 10px 24px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 10px; }
+        .danger-btn:hover { background: #ad1457; }
+        .profile-pic-section { display: flex; flex-direction: row; gap: 36px; align-items: center; margin-bottom: 20px; }
+        .profile-pic-upload { display: flex; flex-direction: column; align-items: flex-start; }
+        .profile-pic-preview { width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 3px solid #e91e63; margin-top: 18px; margin-bottom: 10px; }
+        .avatar-list-section { display: flex; flex-direction: column; align-items: flex-start; margin-left: 10px; }
+        .divider { border-bottom: 1px solid #eee; margin: 30px 0; }
+        @media (max-width: 900px) {
+            .settings-wrapper { flex-direction: column; }
+            .sidebar { width: 100%; flex-direction: row; border-right: none; border-bottom: 1px solid #eee; }
+            .settings-content { padding: 30px 10px; }
+        }
+    </style>
+</head>
+<body>
+<div class="settings-wrapper">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <img class="profile-pic" id="sidebar-profile-pic"
+             src="{% if user.profile_picture %}{{ url_for('static', filename='uploads/' + user.profile_picture) }}{% elif user.avatar %}{{ url_for('static', filename='avatars/' + user.avatar) }}{% else %}{{ url_for('static', filename='images/default-profile.png') }}{% endif %}"
+             alt="Profile Picture">
+        <div class="username">{{ user.username }}</div>
+        <a href="{{ url_for('dashboard') }}" class="back-btn">Back to Dashboard</a>
+        <nav>
+            <a href="#profile" class="active" onclick="showSection('profile')">Profile</a>
+            <a href="#password" onclick="showSection('password')">Password</a>
+            <a href="#preferences" onclick="showSection('preferences')">Preferences</a>
+            <a href="#account" onclick="showSection('account')">Account</a>
+        </nav>
+    </aside>
+    <main class="settings-content">
+        <!-- Profile Section -->
+        <form method="POST" enctype="multipart/form-data" action="{{ url_for('settings') }}">
+            <input type="hidden" name="action" value="save_profile">
+            <div class="settings-card" id="profile-section">
+                <h2>Profile Information</h2>
+                <div class="profile-pic-section">
+                    <div class="profile-pic-upload">
+                        <label>Upload Your Picture</label>
+                        <input type="file" name="profile_picture" accept="image/*" onchange="previewProfilePic(this)">
+                        <img id="profile-pic-preview"
+                             class="profile-pic-preview"
+                             src="{% if user.profile_picture %}{{ url_for('static', filename='uploads/' + user.profile_picture) }}{% elif user.avatar %}{{ url_for('static', filename='avatars/' + user.avatar) }}{% else %}{{ url_for('static', filename='images/default-profile.png') }}{% endif %}"
+                             alt="Profile Picture Preview">
+                    </div>
+                    <div class="avatar-list-section">
+                        <label style="margin-bottom: 2px;">Or choose an avatar:</label>
+                        <div class="avatar-list">
+                            {% for avatar in avatars %}
+                            <img src="{{ url_for('static', filename='avatars/' + avatar) }}" alt="Avatar"
+                                 onclick="selectAvatar(this, '{{ avatar }}')"
+                                 class="{% if user.avatar == avatar %}selected{% endif %}">
+                            {% endfor %}
+                        </div>
+                        <input type="hidden" name="selected_avatar" id="selected_avatar" value="{{ user.avatar or '' }}">
+                    </div>
+                </div>
+                <div class="divider"></div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="name">Name</label>
+                        <input type="text" id="name" name="name" value="{{ user.name or '' }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" value="{{ user.username or '' }}" required readonly>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="email">Email Address</label>
+                        <input type="email" id="email" name="email" value="{{ user.email or '' }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="phone">Phone Number</label>
+                        <input type="text" id="phone" name="phone" value="{{ user.phone or '' }}">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="location">Location</label>
+                        <input type="text" id="location" name="location" value="{{ user.location or '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="website">Website</label>
+                        <input type="text" id="website" name="website" value="{{ user.website or '' }}">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="bio">Bio</label>
+                    <input type="text" id="bio" name="bio" maxlength="200" value="{{ user.bio or '' }}">
+                </div>
+                <button class="save-btn" type="submit">Save Profile</button>
+            </div>
+        </form>
+        <!-- Password Section -->
+        <form method="POST" action="{{ url_for('settings') }}">
+            <input type="hidden" name="action" value="change_password">
+            <div class="settings-card" id="password-section" style="display:none;">
+                <h2>Change Password</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="current_password">Current Password</label>
+                        <input type="password" id="current_password" name="current_password">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="new_password">New Password</label>
+                        <input type="password" id="new_password" name="new_password" pattern=".{8,}" title="At least 8 characters">
+                    </div>
+                    <div class="form-group">
+                        <label for="confirm_password">Confirm New Password</label>
+                        <input type="password" id="confirm_password" name="confirm_password">
+                    </div>
+                </div>
+                <small>Password must be at least 8 characters.</small>
+                <button class="save-btn" type="submit">Change Password</button>
+            </div>
+        </form>
+        <!-- Preferences Section -->
+        <form method="POST" action="{{ url_for('settings') }}">
+            <input type="hidden" name="action" value="save_preferences">
+            <div class="settings-card" id="preferences-section" style="display:none;">
+                <h2>Preferences</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="timezone">Time Zone</label>
+                        <select id="timezone" name="timezone">
+                            <option value="">Select Time Zone</option>
+                            <option value="UTC">UTC</option>
+                            <option value="America/New_York">America/New_York</option>
+                            <option value="Europe/London">Europe/London</option>
+                            <option value="Asia/Kolkata">Asia/Kolkata</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="datetime_format">Date/Time Format</label>
+                        <select id="datetime_format" name="datetime_format">
+                            <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                            <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                            <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="save-btn" type="submit">Save Preferences</button>
+            </div>
+        </form>
+        <!-- Account Section -->
+        <div class="settings-card danger-zone" id="account-section" style="display:none;">
+            <h3>Account Deactivation</h3>
+            <p>You can temporarily deactivate your account. Deactivation will hide your profile until you reactivate it.</p>
+            <button class="danger-btn" type="button" onclick="showDeactivateModal()">Deactivate Account</button>
+            <div style="height: 18px;"></div>
+            <h3 style="color: #b71c1c; margin-top: 30px;">Account Closure</h3>
+            <p style="color: #b71c1c;">Warning: This action is permanent and cannot be undone!<br>All your data including chat history, quiz results, and study lists will be permanently deleted.</p>
+            <button class="danger-btn" style="background: #b71c1c;" type="button" onclick="showCloseModal()">Close Account Permanently</button>
+        </div>
+        
+        <!-- Deactivation Confirmation Modal -->
+        <div id="deactivate-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 10px; max-width: 500px; width: 90%;">
+                <h3 style="color: #c2185b; margin-top: 0;">Confirm Account Deactivation</h3>
+                <p>Are you sure you want to deactivate your account? You can reactivate it at any time.</p>
+                <form method="POST" action="{{ url_for('deactivate_account') }}">
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label for="deactivation_reason">Reason for Deactivation (required)</label>
+                        <textarea id="deactivation_reason" name="deactivation_reason" required 
+                                  style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; background: #fafbfc; resize: vertical; min-height: 80px;" 
+                                  placeholder="Please tell us why you're deactivating your account..."></textarea>
+                    </div>
+                    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                        <button type="button" onclick="hideDeactivateModal()" 
+                                style="background: #f0f0f0; color: #333; border: none; border-radius: 6px; padding: 10px 20px; cursor: pointer;">
+                            Cancel
+                        </button>
+                        <button type="submit" class="danger-btn">
+                            Yes, Deactivate Account
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <!-- Account Closure Confirmation Modal -->
+        <div id="close-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 10px; max-width: 500px; width: 90%;">
+                <h3 style="color: #b71c1c; margin-top: 0;">Confirm Account Closure</h3>
+                <p style="color: #b71c1c; font-weight: 600;">Warning: This action is permanent and cannot be undone!</p>
+                <p>All your data including chat history, quiz results, and study lists will be permanently deleted.</p>
+                <form method="POST" action="{{ url_for('close_account') }}">
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label for="close_reason">Reason for Closing Account (required)</label>
+                        <textarea id="close_reason" name="close_reason" required 
+                                  style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; background: #fafbfc; resize: vertical; min-height: 80px;" 
+                                  placeholder="Please tell us why you're closing your account..."></textarea>
+                    </div>
+                    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                        <button type="button" onclick="hideCloseModal()" 
+                                style="background: #f0f0f0; color: #333; border: none; border-radius: 6px; padding: 10px 20px; cursor: pointer;">
+                            Cancel
+                        </button>
+                        <button type="submit" class="danger-btn" style="background: #b71c1c;">
+                            Yes, Close Account Permanently
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+</div>
+<script>
+    // Section navigation
+    function showSection(section) {
+        ['profile', 'password', 'preferences', 'account'].forEach(function(sec) {
+            document.getElementById(sec + '-section').style.display = (sec === section) ? '' : 'none';
+            document.querySelector('.sidebar nav a[href="#' + sec + '"]').classList.toggle('active', sec === section);
+        });
+    }
+    // Profile picture preview
+    function previewProfilePic(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('profile-pic-preview').src = e.target.result;
+                document.getElementById('sidebar-profile-pic').src = e.target.result;
+            }
+            reader.readAsDataURL(input.files[0]);
+            // Deselect avatar if uploading a new picture
+            document.querySelectorAll('.avatar-list img').forEach(i => i.classList.remove('selected'));
+            document.getElementById('selected_avatar').value = '';
+        }
+    }
+    // Avatar selection
+    function selectAvatar(img, avatarName) {
+        document.querySelectorAll('.avatar-list img').forEach(i => i.classList.remove('selected'));
+        img.classList.add('selected');
+        document.getElementById('selected_avatar').value = avatarName;
+        document.getElementById('profile-pic-preview').src = img.src;
+        document.getElementById('sidebar-profile-pic').src = img.src;
+        // Clear file input if avatar is chosen
+        document.querySelector('input[type="file"][name="profile_picture"]').value = '';
+    }
+    // Modal functions for deactivation
+    function showDeactivateModal() {
+        document.getElementById('deactivate-modal').style.display = 'block';
+        document.body.style.overflow = 'hidden'; // Prevent background scrolling
+    }
+    function hideDeactivateModal() {
+        document.getElementById('deactivate-modal').style.display = 'none';
+        document.body.style.overflow = 'auto'; // Restore scrolling
+        document.getElementById('deactivation_reason').value = ''; // Clear the textarea
+    }
+    // Modal functions for closure
+    function showCloseModal() {
+        document.getElementById('close-modal').style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    }
+    function hideCloseModal() {
+        document.getElementById('close-modal').style.display = 'none';
+        document.body.style.overflow = 'auto';
+        document.getElementById('close_reason').value = '';
+    }
+    // Close modal if clicking outside of it
+    document.addEventListener('click', function(event) {
+        const modal = document.getElementById('deactivate-modal');
+        if (event.target === modal) {
+            hideDeactivateModal();
+        }
+    });
+    
+    // On page load, show profile section
+    document.addEventListener('DOMContentLoaded', function() {
+        showSection('profile');
+    });
+</script>
+</body>
+</html>

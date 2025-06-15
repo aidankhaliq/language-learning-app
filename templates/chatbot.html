@@ -1,0 +1,1760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Language Tutor Chat</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        /* Basic Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #1e1e1e; /* Dark background for the whole page */
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+            color: #eee; /* Default text color for dark mode */
+        }
+
+        .chat-wrapper {
+            display: flex;
+            background-color: #2d2d2d; /* Dark background for the wrapper */
+            border-radius: 20px;
+            overflow: hidden;
+            width: 95%; /* Increased width */
+            max-width: 1600px; /* Increased max-width */
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            height: 92vh; /* Balanced height that shows all elements */
+        }
+
+        /* Sidebar for chat history */
+        .sidebar {
+            width: 300px; /* Slightly wider sidebar */
+            background: #252526; /* Darker sidebar background */
+            border-right: 1px solid #3e3e3e; /* Dark border */
+            padding: 1rem 0.8rem; /* Adjusted padding */
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .sidebar-header {
+            margin-bottom: 1rem;
+        }
+
+        .header-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .delete-all-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .delete-all-btn:hover {
+            background: #c82333;
+            transform: translateY(-1px);
+        }
+
+        .sidebar-title {
+            font-size: 1.3rem; /* Slightly larger title */
+            font-weight: bold;
+            color: #eee; /* Light text color */
+        }
+
+        .new-chat-btn {
+            background: #007bff; /* Keep primary button color or adjust */
+            color: #fff;
+            border: none;
+            border-radius: 8px; /* Slightly larger border radius */
+            padding: 8px 16px; /* Adjusted padding */
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.3s ease;
+            flex: 1; /* Take remaining space in flex container */
+        }
+
+        .new-chat-btn:hover {
+            background: #0056b3;
+        }
+
+        .session-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .session-item {
+            padding: 12px; /* Increased padding */
+            border-radius: 8px; /* Slightly larger border radius */
+            margin-bottom: 8px; /* Increased margin */
+            cursor: pointer;
+            background: #3e3e3e; /* Dark background for items */
+            color: #ddd; /* Lighter text for items */
+            transition: background 0.2s;
+            font-size: 1.05rem; /* Slightly larger font size */
+            position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .session-text {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin-right: 8px;
+        }
+
+        .session-delete-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            width: 24px;
+            height: 24px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .session-item:hover .session-delete-btn {
+            opacity: 1;
+        }
+
+        .session-delete-btn:hover {
+            background: #c82333;
+            transform: scale(1.1);
+        }
+
+        .session-item.active,
+        .session-item:hover {
+            background: #505050; /* Darker background on hover/active */
+        }
+
+        .open-study-list-btn {
+            margin-top: 1.5rem; /* Increased margin */
+            background: #e91e63; /* Keep accent color or adjust */
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 20px; /* Adjusted padding */
+            font-size: 1.1rem; /* Slightly larger font size */
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.3s ease;
+        }
+
+        .open-study-list-btn:hover {
+            background: #ad1457;
+        }
+
+        /* Main Chat Area */
+        .main-chat {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            background-color: #1e1e1e; /* Dark background for main chat */
+        }
+
+        /* Header */
+        .chat-header {
+            background: #2d2d2d; /* Dark background */
+            padding: 1.2rem 1.5rem; /* Adjusted padding */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #3e3e3e; /* Dark border */
+        }
+
+        .chat-header h1 {
+            font-size: 2.2rem;
+            color: #eee; /* Light text */
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        .back-button {
+            background-color: #3e3e3e; /* Darker background */
+            color: #eee; /* Light text */
+            border: none;
+            padding: 12px 24px;
+            font-size: 1.1rem;
+            border-radius: 12px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .back-button:hover {
+            background-color: #505050;
+            transform: translateY(-2px);
+        }
+
+        /* Chat Section (contains progress, language selector, messages, input) */
+        .chat-section {
+            padding: 1rem; /* Further reduced padding */
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            min-height: 0;
+            overflow: hidden;
+            background-color: #1e1e1e; /* Ensure dark background */
+            gap: 0.3rem; /* Reduced gap to save space */
+            justify-content: space-between; /* Ensure input stays at bottom */
+        }
+
+        /* Progress Tracking Section */
+        .progress-section {
+            background: #2d2d2d; /* Dark background */
+            padding: 0.8rem; /* Reduced padding further */
+            border-radius: 8px; /* Reduced border radius */
+            margin-top: 0; /* Remove margin-top as it's in a sidebar */
+            margin-bottom: 1rem; /* Add margin at the bottom */
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); /* Reduced shadow */
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.8rem; /* Reduced margin */
+        }
+
+        .progress-title {
+            font-size: 1.1rem; /* Reduced font size */
+            font-weight: 600;
+            color: #eee; /* Light text */
+        }
+
+        .progress-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); /* Adjusted for smaller size */
+            gap: 0.6rem; /* Reduced gap */
+            margin-top: 0.6rem; /* Reduced margin */
+        }
+
+        .stat-card {
+            background: #3e3e3e; /* Dark background for cards */
+            padding: 0.6rem; /* Reduced padding */
+            border-radius: 6px; /* Reduced border radius */
+            text-align: center;
+            transition: transform 0.3s ease;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3); /* Reduced shadow */
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .stat-value {
+            font-size: 1.5rem; /* Reduced font size */
+            font-weight: 600;
+            color: #7fc9ff; /* Lighter blue for stats */
+            margin-bottom: 0.3rem; /* Reduced margin */
+        }
+
+        .stat-label {
+            color: #bbb; /* Lighter grey */
+            font-size: 0.9rem; /* Reduced font size */
+        }
+
+        .progress-bar {
+            height: 6px; /* Reduced thickness */
+            background: #3e3e3e; /* Dark background */
+            border-radius: 3px; /* Reduced border radius */
+            overflow: hidden;
+            margin-top: 1rem; /* Adjusted margin */
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #7fc9ff, #4a90e2); /* Blue gradient */
+            border-radius: 3px; /* Reduced border radius */
+            transition: width 0.3s ease;
+        }
+
+        .achievements-section {
+            margin-top: 0; /* Remove margin-top as it's in a sidebar */
+            padding: 1.2rem; /* Original larger padding */
+            background: #252526; /* Darker background */
+            border-radius: 8px; /* Original border radius */
+        }
+
+        .achievements-title {
+            font-size: 1.2rem; /* Original larger font size */
+            font-weight: 600;
+            color: #eee; /* Light text */
+            margin-bottom: 1.5rem; /* Original larger margin */
+        }
+
+        .achievements-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); /* Original larger size */
+            gap: 1.2rem; /* Original larger gap */
+        }
+
+        .achievement-card {
+            background: #3e3e3e; /* Dark background for cards */
+            padding: 1rem; /* Original larger padding */
+            border-radius: 8px; /* Original larger border radius */
+            box-shadow: 0 3px 8px rgba(0,0,0,0.3); /* Original stronger shadow */
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .achievement-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 12px rgba(0,0,0,0.5);
+        }
+
+        .achievement-icon {
+            font-size: 2.5rem; /* Original larger icon size */
+            margin-bottom: 0.8rem; /* Original larger margin */
+            color: #ffb74d; /* Orange color for icons */
+        }
+
+        .achievement-name {
+            font-weight: 600;
+            color: #eee; /* Light text */
+            font-size: 1.1rem; /* Original larger font size */
+            margin-bottom: 0.5rem; /* Original larger margin */
+        }
+
+        .achievement-desc {
+            font-size: 1rem; /* Original larger font size */
+            color: #bbb; /* Lighter grey */
+        }
+
+        .achievement-date {
+            font-size: 0.9rem; /* Original larger font size */
+            color: #888; /* Grey text */
+            margin-top: 0.8rem; /* Original larger margin */
+        }
+
+        .new-achievement {
+            animation: achievementUnlock 1s ease;
+        }
+
+        @keyframes achievementUnlock {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+            100% { transform: scale(1); }
+        }
+
+        .streak-card {
+            background: linear-gradient(135deg, #ffb74d, #f57c00); /* Orange gradient */
+            color: white;
+        }
+
+        .streak-card .stat-value {
+            color: white;
+        }
+
+        .streak-card .stat-label {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .language-selector {
+            background-color: #2d2d2d; /* Dark background */
+            border-radius: 8px;
+            padding: 0.4rem 0.8rem; /* Further reduced padding */
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            margin-bottom: 0.4rem; /* Further reduced margin */
+        }
+
+        .language-selector select {
+            padding: 0.8rem;
+            border: 1px solid #555; /* Darker border */
+            border-radius: 10px;
+            background-color: #3e3e3e; /* Dark background */
+            color: #eee; /* Light text */
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            -webkit-appearance: none; /* Remove default dropdown arrow */
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.362%22%20height%3D%22292.362%22%3E%3Cpath%20fill%3D%22%23eeeeee%22%20d%3D%22M287.827%2069.426c-3.246-3.245-7.489-4.867-12.731-4.867H17.269c-5.242%200-9.485%201.622-12.731%204.867C1.266%2072.67%200%2076.914%200%2082.156l128.115%20128.114c3.245%203.245%207.489%204.867%2012.731%204.867s9.485-1.622%2012.731-4.867L292.362%2082.156c3.245-3.245%204.867-7.489%204.867-12.73zm-104.722%20101.437L146.18%20183.676l-36.925-36.925z%22%2F%3E%3C%2Fsvg%3E'); /* Custom dropdown arrow */
+            background-repeat: no-repeat;
+            background-position: right 0.8rem top 50%;
+            background-size: 0.65em auto;
+        }
+
+        .language-selector select:hover {
+            border-color: #7fc9ff; /* Lighter blue on hover */
+        }
+
+        .start-chat-button {
+            background: linear-gradient(135deg, #1abc9c, #16a085); /* Green gradient */
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1.1rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .start-chat-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(26, 188, 156, 0.3);
+            background: linear-gradient(135deg, #16a085, #1abc9c); /* Darker green on hover */
+        }
+
+        /* Chat Messages */
+        .chat-messages {
+            flex-grow: 4; /* Increased to use the space freed up by inline speech input */
+            overflow-y: auto;
+            padding: 1rem; /* Adjusted padding */
+            background-color: #2d2d2d; /* Dark background */
+            border-radius: 10px;
+            margin-bottom: 0.5rem; /* Further reduced margin */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            min-height: 250px; /* Increased minimum height with freed space */
+            max-height: 50vh; /* Increased max height with more available space */
+        }
+
+        /* Scrollbar Customization for dark theme */
+        .chat-messages::-webkit-scrollbar {
+            width: 10px; /* Slightly wider scrollbar */
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: #2d2d2d; /* Match background */
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background-color: #555; /* Darker thumb */
+            border-radius: 5px;
+            border: 2px solid #2d2d2d; /* Border to make thumb thinner */
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background-color: #777; /* Lighter thumb on hover */
+        }
+
+        .message {
+            padding: 1rem; /* Adjusted padding */
+            margin-bottom: 0.8rem; /* Adjusted margin */
+            border-radius: 10px;
+            max-width: 85%;
+            font-size: 1rem; /* Adjusted font size */
+            line-height: 1.4;
+            animation: messageAppear 0.3s ease;
+            color: #eee; /* Default message text color */
+        }
+
+        .user-message {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad); /* Purple gradient for user */
+            color: white;
+            margin-left: auto;
+            box-shadow: 0 2px 8px rgba(148, 84, 184, 0.3);
+        }
+
+        .bot-message {
+            background: #3e3e3e; /* Dark grey background for bot */
+            color: #eee; /* Light text */
+            margin-right: auto; /* Align bot messages to the left */
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Translation styles */
+        .response-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .target-language-response {
+            font-size: 1.1rem;
+            line-height: 1.4;
+        }
+
+        .translation {
+            font-size: 0.9rem;
+            color: #aaa;
+            font-style: italic;
+            padding-top: 0.5rem;
+            border-top: 1px solid #555;
+        }
+
+        /* Chat Input */
+        .chat-input {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem; /* Consistent padding all around */
+            border-top: 1px solid #3e3e3e; /* Dark border */
+            background-color: #2d2d2d; /* Dark background */
+            border-radius: 10px;
+            margin-top: 0.5rem; /* Small margin to separate from content above */
+            flex-shrink: 0; /* Prevent input from shrinking */
+            min-height: 60px; /* Ensure minimum height for visibility */
+            position: relative; /* Ensure it stays in position */
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 1rem;
+            border: 1px solid #555; /* Darker border */
+            border-radius: 10px;
+            font-size: 1.1rem;
+            outline: none;
+            transition: border-color 0.3s ease;
+            background-color: #3e3e3e; /* Dark background */
+            color: #eee; /* Light text */
+        }
+
+        .chat-input input:focus {
+            border-color: #8e44ad; /* Purple border on focus */
+        }
+
+        .chat-input button {
+            padding: 1rem 2rem;
+            background-color: #8e44ad; /* Purple send button */
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .chat-input button:hover {
+            background-color: #9b59b6; /* Lighter purple on hover */
+        }
+
+        /* Study List Sidebar (Enhanced Dark Mode) */
+        .study-list-sidebar {
+            position: fixed;
+            right: 0;
+            top: 0;
+            width: 350px; /* Wider sidebar */
+            height: 100vh;
+            background: #252526; /* Dark background */
+            box-shadow: -4px 0 15px rgba(0,0,0,0.5);
+            z-index: 1001;
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid #3e3e3e; /* Dark border */
+            animation: slideIn 0.2s;
+        }
+
+        .study-list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem; /* Increased padding */
+            border-bottom: 1px solid #3e3e3e; /* Dark border */
+            font-size: 1.4rem; /* Larger font size */
+            font-weight: bold;
+            background: #2d2d2d; /* Dark background */
+            color: #eee; /* Light text */
+        }
+
+        .close-study-list {
+            background: none;
+            border: none;
+            font-size: 2.2rem; /* Larger close button */
+            color: #e74c3c; /* Red color */
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .close-study-list:hover {
+            color: #c0392b;
+        }
+
+        .study-list-words {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem; /* Increased padding */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .study-list-word-item {
+            display: flex;
+            flex-direction: column; /* Stack word and note */
+            align-items: flex-start; /* Align left */
+            background: #3e3e3e; /* Dark background */
+            color: #eee; /* Light text */
+            border-radius: 8px;
+            padding: 1rem; /* Increased padding */
+            margin-bottom: 0.8rem; /* Adjusted margin */
+            font-size: 1.1rem;
+            width: 100%;
+        }
+
+        .word-and-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+
+        .remove-word-btn {
+            background: none;
+            border: none;
+            color: #e74c3c; /* Red color */
+            font-size: 1.4rem; /* Larger button */
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .remove-word-btn:hover {
+            color: #c0392b;
+        }
+
+        .note-input {
+            width: 100%; /* Make input fill width */
+            border: 1px solid #555; /* Dark border */
+            border-radius: 5px;
+            padding: 8px 10px; /* Adjusted padding */
+            margin-right: 0; /* Remove margin */
+            background: #2d2d2d; /* Dark background */
+            color: #eee; /* Light text */
+            font-size: 1rem;
+        }
+
+        .save-note-btn {
+            background: #3498db; /* Blue color */
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            padding: 8px 12px; /* Adjusted padding */
+            font-size: 0.95rem;
+            cursor: pointer;
+            margin-top: 0.5rem; /* Add margin above button */
+            transition: background-color 0.3s ease;
+        }
+
+        .save-note-btn:hover {
+            background-color: #2980b9;
+        }
+
+        .review-mode-btn {
+            background: #3498db; /* Blue color */
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 12px 18px; /* Adjusted padding */
+            font-size: 1rem;
+            cursor: pointer;
+            margin: 1rem 0 0.8rem 0; /* Adjusted margins */
+            width: 100%;
+            transition: background-color 0.3s ease;
+        }
+
+        .review-mode-btn:hover {
+            background-color: #2980b9;
+        }
+
+        .review-word {
+            font-size: 2rem; /* Larger font size */
+            color: #eee; /* Light text */
+            font-weight: bold;
+            margin-bottom: 1.5rem; /* Increased margin */
+            text-align: center;
+            word-break: break-word;
+        }
+
+        .review-note-section {
+            margin-bottom: 2rem; /* Increased margin */
+            padding: 1.2rem; /* Increased padding */
+            background: #2d2d2d; /* Dark background */
+            border-left: 4px solid #3498db; /* Blue border */
+            border-radius: 0 0 8px 8px;
+        }
+
+        .note-label {
+            font-size: 1.1rem; /* Slightly larger font size */
+            font-weight: bold;
+            color: #bbb; /* Lighter grey */
+            margin-bottom: 0.6rem; /* Adjusted margin */
+        }
+
+        .review-note {
+            color: #eee; /* Light text */
+            font-style: italic;
+            font-size: 1rem; /* Slightly larger font size */
+        }
+
+        .review-controls {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-top: 1.5rem; /* Increased margin */
+        }
+
+        .review-nav-btn,
+        .review-exit-btn {
+            padding: 10px 20px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        .review-nav-btn {
+            background-color: #3498db; /* Blue color */
+            color: white;
+        }
+
+        .review-exit-btn {
+            background-color: #e74c3c; /* Red color */
+            color: white;
+        }
+
+        .review-nav-btn:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .review-exit-btn:hover {
+            background-color: #c0392b;
+            transform: translateY(-2px);
+        }
+
+        .review-counter {
+            color: #bbb; /* Lighter grey */
+            font-size: 1rem; /* Slightly larger font size */
+            text-align: center;
+            margin-top: 1.5rem; /* Increased margin */
+        }
+
+        .review-card {
+            background-color: #3e3e3e; /* Dark background */
+            border-radius: 12px;
+            padding: 2rem; /* Increased padding */
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            margin-bottom: 1.5rem;
+            border: 1px solid #555; /* Dark border */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
+
+        /* Bot word and add button styling for dark theme */
+        .bot-word {
+            cursor: pointer;
+            padding: 4px 6px;
+            margin: 1px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            color: #eee; /* Light text */
+            border: 1px solid transparent;
+            user-select: none;
+            font-weight: 500;
+            display: inline-block;
+        }
+        .bot-word:hover {
+            background-color: #e6f2ff !important;
+            border-color: #4f8cff;
+            color: #333 !important;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(79, 140, 255, 0.2);
+        }
+        .bot-word.selected {
+            background: #4f8cff !important; /* Blue background when selected */
+            color: #fff !important; /* White text */
+            font-weight: bold;
+            border-color: #3a73d9;
+            box-shadow: 0 2px 8px rgba(79, 140, 255, 0.3);
+            transform: translateY(-1px);
+        }
+        .bot-word.selected:hover {
+            background: #3a73d9 !important;
+        }
+        .add-study-btn {
+            background: #8e44ad; /* Purple button */
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 6px 14px; /* Adjusted padding */
+            font-size: 0.9rem; /* Adjusted font size */
+            margin-left: 10px;
+            cursor: pointer;
+            vertical-align: middle;
+            transition: background 0.3s ease;
+        }
+        .add-study-btn:hover:not(.added) {
+            background: #9b59b6; /* Lighter purple on hover */
+        }
+        .add-study-btn.added {
+            background: #555; /* Darker grey when added */
+            color: #bbb; /* Lighter grey text */
+            cursor: default;
+        }
+
+        /* Learning Progress Sidebar Styles */
+        .progress-sidebar {
+            width: 250px; /* Adjust width as needed */
+            background: #252526; /* Darker sidebar background */
+            border-left: 1px solid #3e3e3e; /* Dark border */
+            padding: 1rem 0.8rem; /* Adjusted padding */
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            overflow-y: auto; /* Add scrolling if content overflows */
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-wrapper">
+        <!-- Study List Sidebar -->
+        <div class="study-list-sidebar" id="study-list-sidebar" style="display:none;">
+            <div class="study-list-header">
+                <span>📚 Study List</span>
+                <button onclick="toggleStudyList()" class="close-study-list">&times;</button>
+            </div>
+            <div id="study-list-words" class="study-list-words"></div>
+        </div>
+        <!-- Sidebar for chat history -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <span class="sidebar-title">Chat History</span>
+                <div class="header-buttons">
+                    <button class="new-chat-btn" onclick="startNewChat()">New Chat</button>
+                    <button class="delete-all-btn" onclick="deleteAllChats()" title="Delete all chats">🗑️</button>
+                </div>
+            </div>
+            <div class="session-list" id="session-list">
+                <!-- Sessions will be loaded here -->
+            </div>
+            <button class="open-study-list-btn" onclick="toggleStudyList()">📚 Study List</button>
+        </div>
+        <!-- Main Chat Area -->
+        <div class="main-chat">
+            <div class="chat-header">
+                <h1>Chat with AI Language Tutor</h1>
+                <a href="{{ url_for('dashboard') }}" class="back-button">Back to Dashboard</a>
+            </div>
+            <div class="chat-section">
+                <div class="language-selector">
+                    <select id="language-select">
+                        <option value="english">English</option>
+                        <option value="spanish">Spanish</option>
+                        <option value="french">French</option>
+                        <option value="german">German</option>
+                        <option value="italian">Italian</option>
+                        <option value="portuguese">Portuguese</option>
+                        <option value="chinese">Chinese</option>
+                        <option value="japanese">Japanese</option>
+                        <option value="korean">Korean</option>
+                    </select>
+                    <button class="start-chat-button" onclick="startNewChat()">Start Chat</button>
+                </div>
+                <div class="chat-messages" id="chat-messages">
+                    <div class="message bot-message">
+                        Hello! I'm your AI language tutor. Choose a language and start chatting with me to practice!
+                    </div>
+                </div>
+                <!-- Pronunciation Checker UI with Live Speech Transcript -->
+                <div class="pronunciation-checker" style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap;">
+                    <button id="mic-btn" title="Speak to check pronunciation" style="font-size: 1rem; padding: 6px 10px; border-radius: 6px; border: none; background: #4a90e2; color: #fff; cursor: pointer;">🎤 Speak</button>
+                    <div id="live-speech-transcript" style="flex: 1; min-height: 30px; background: #222; color: #fff; border-radius: 6px; padding: 8px; font-size: 1rem; margin-left: 10px;"></div>
+                    <span id="transcript" style="min-width: 120px; color: #7fc9ff;"></span>
+                    <span id="pronunciation-feedback" style="margin-left: 10px; color: #ffb74d;"></span>
+                </div>
+                <!-- Word Selection Instructions -->
+                <div class="selection-instructions" style="margin-bottom: 10px; padding: 8px 12px; background: #333; border-radius: 6px; color: #bbb; font-size: 0.85rem; border-left: 3px solid #4f8cff;">
+                    💡 <strong>Tip:</strong> Click individual words to select them, use <kbd>Ctrl+A</kbd> to select all words, or <kbd>Esc</kbd> to clear selections.
+                </div>
+                
+                <!-- Image Upload for Chatbot -->
+                <div class="chatbot-image-upload" style="margin-bottom: 10px; display: flex; align-items: center; gap: 10px;">
+                    <input type="file" id="chatbot-image-input" accept="image/*" style="color: #fff;">
+                    <img id="chatbot-image-preview" src="" alt="Image Preview" style="max-width: 80px; max-height: 80px; display: none; border-radius: 8px; border: 1px solid #555; background: #222;" />
+                    <button id="remove-image-btn" style="display:none; background:#e74c3c; color:#fff; border:none; border-radius:6px; padding:4px 10px; cursor:pointer;">Remove</button>
+                </div>
+                <!-- End Image Upload for Chatbot -->
+                <div class="chat-input">
+                    <input type="text" id="message-input" placeholder="Type your message here...">
+                    <button onclick="sendMessage()">Send</button>
+                </div>
+            </div>
+        </div>
+        <!-- Learning Progress Sidebar -->
+        <div class="progress-sidebar dark-theme" id="progress-sidebar">
+            <div class="progress-section dark-theme">
+                <div class="progress-header">
+                    <span class="progress-title">Learning Progress</span>
+                </div>
+                <div class="progress-stats">
+                    <div class="stat-card dark-theme">
+                        <div class="stat-value" id="words-learned">0</div>
+                        <div class="stat-label">Words Learned</div>
+                    </div>
+                    <div class="stat-card dark-theme">
+                        <div class="stat-value" id="conversation-count">0</div>
+                        <div class="stat-label">Conversations</div>
+                    </div>
+                    <div class="stat-card dark-theme">
+                        <div class="stat-value" id="accuracy-rate">0%</div>
+                        <div class="stat-label">Accuracy Rate</div>
+                    </div>
+                    <div class="stat-card streak-card">
+                        <div class="stat-value" id="daily-streak">0</div>
+                        <div class="stat-label">Day Streak 🔥</div>
+                    </div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        let messageInput = document.getElementById('message-input');
+        let messagesContainer = document.getElementById('chat-messages');
+        let languageSelect = document.getElementById('language-select');
+        let sessionList = document.getElementById('session-list');
+        let currentSessionId = null;
+        let loadingSession = false;
+        let studyList = [];
+        let selectedWord = null;
+        let reviewMode = false;
+        let reviewIndex = 0;
+        let reviewWords = [];
+        let selectedImageFile = null;
+        let imageObjectUrl = null;
+
+        // Add dark theme class to relevant elements
+        document.body.classList.add('dark-theme'); // Apply to body for default text/background
+        document.querySelector('.chat-wrapper').classList.add('dark-theme');
+        document.querySelector('.sidebar').classList.add('dark-theme');
+        document.querySelector('.main-chat').classList.add('dark-theme');
+        document.querySelector('.chat-header').classList.add('dark-theme');
+        document.querySelector('.chat-section').classList.add('dark-theme');
+        document.querySelector('.progress-section').classList.add('dark-theme');
+        document.querySelector('.language-selector').classList.add('dark-theme');
+        languageSelect.classList.add('dark-theme');
+        messagesContainer.classList.add('dark-theme');
+        document.querySelector('.chat-input').classList.add('dark-theme');
+        messageInput.classList.add('dark-theme');
+        document.querySelector('.chat-input button').classList.add('dark-theme');
+        document.querySelector('.open-study-list-btn').classList.add('dark-theme');
+
+        // Add dark theme class to existing session items
+        document.querySelectorAll('.session-item').forEach(item => item.classList.add('dark-theme'));
+
+        // Function to update session items with dark theme class
+        const originalLoadSessions = loadSessions;
+        loadSessions = function(activeSessionId = null) {
+            originalLoadSessions(activeSessionId);
+            setTimeout(() => {
+                document.querySelectorAll('.session-item').forEach(item => item.classList.add('dark-theme'));
+            }, 50);
+        };
+
+        // Generate a UUID for new sessions
+        function generateSessionId() {
+            return 'sess-' + ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+                (c ^ crypto.getRandomValues(new Uint8array(1))[0] & 15 >> c / 4).toString(16)
+            );
+        }
+
+        function addMessage(message, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+            // Add dark-theme class to messages as they are added
+            messageDiv.classList.add('dark-theme');
+            if (!isUser) {
+                // Create container for the response and translation
+                const responseContainer = document.createElement('div');
+                responseContainer.className = 'response-container';
+                
+                // Add the response in target language
+                const responseDiv = document.createElement('div');
+                responseDiv.className = 'target-language-response';
+                
+                // Split message.response into meaningful words/phrases
+                // First, clean up the text and then split into words
+                const cleanText = (message.response || '').replace(/\*\*/g, ''); // Remove markdown
+                const words = cleanText.split(/(\s+)/g).filter(word => word.trim().length > 0);
+                
+                words.forEach((word, idx) => {
+                    const span = document.createElement('span');
+                    span.className = 'bot-word';
+                    span.textContent = word.trim();
+                    
+                    // Enhanced click handler for better selection
+                    span.onclick = function(e) {
+                        e.stopPropagation();
+                        span.classList.toggle('selected');
+                        
+                        // Visual feedback
+                        if (span.classList.contains('selected')) {
+                            span.style.backgroundColor = '#4f8cff';
+                            span.style.color = 'white';
+                        } else {
+                            span.style.backgroundColor = '';
+                            span.style.color = '';
+                        }
+                        
+                        // Update counter
+                        updateSelectionCounter();
+                    };
+                    
+                    // Add hover effect
+                    span.onmouseenter = function() {
+                        if (!span.classList.contains('selected')) {
+                            span.style.backgroundColor = '#e6f2ff';
+                        }
+                    };
+                    
+                    span.onmouseleave = function() {
+                        if (!span.classList.contains('selected')) {
+                            span.style.backgroundColor = '';
+                        }
+                    };
+                    
+                    responseDiv.appendChild(span);
+                });
+                responseContainer.appendChild(responseDiv);
+                
+                // Add the translation if it exists
+                if (message.translation) {
+                    const translationDiv = document.createElement('div');
+                    translationDiv.className = 'translation';
+                    translationDiv.textContent = message.translation;
+                    responseContainer.appendChild(translationDiv);
+                }
+                
+                messageDiv.appendChild(responseContainer);
+                
+                // Add button to add selected words/phrases
+                const addBtn = document.createElement('button');
+                addBtn.className = 'add-study-btn';
+                addBtn.textContent = 'Add Selected to Study List (0)';
+                addBtn.onclick = function() {
+                    const selectedWords = Array.from(responseDiv.querySelectorAll('.bot-word.selected')).map(el => el.textContent.trim()).filter(Boolean);
+                    if (selectedWords.length > 0) {
+                        addToStudyList(selectedWords, addBtn);
+                    } else {
+                        alert('Please select some words first by clicking on them!');
+                    }
+                };
+                
+                // Store reference for counter updates
+                responseDiv.addBtn = addBtn;
+                
+                messageDiv.appendChild(addBtn);
+            } else {
+                // For user messages, just set the text content
+                messageDiv.textContent = message;
+            }
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function clearMessages() {
+            messagesContainer.innerHTML = '';
+        }
+
+        function updateSelectionCounter() {
+            // Update all add buttons with current selection count
+            document.querySelectorAll('.add-study-btn').forEach(btn => {
+                const messageDiv = btn.closest('.message');
+                if (messageDiv) {
+                    const selectedWords = messageDiv.querySelectorAll('.bot-word.selected');
+                    btn.textContent = `Add Selected to Study List (${selectedWords.length})`;
+                    
+                    // Enable/disable button based on selection
+                    if (selectedWords.length > 0) {
+                        btn.style.opacity = '1';
+                        btn.style.cursor = 'pointer';
+                        btn.disabled = false;
+                    } else {
+                        btn.style.opacity = '0.6';
+                        btn.style.cursor = 'not-allowed';
+                        btn.disabled = false; // Keep enabled but show visual feedback
+                    }
+                }
+            });
+        }
+
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message && !selectedImageFile) return;
+            addMessage(message, true);
+            messageInput.value = '';
+
+            // Use FormData for text + image
+            const formData = new FormData();
+            formData.append('message', message);
+            formData.append('language', languageSelect.value);
+            formData.append('session_id', currentSessionId || '');
+            if (selectedImageFile) {
+                formData.append('image', selectedImageFile);
+                console.log("Image file appended:", selectedImageFile);
+            } else {
+                console.log("No image file selected.");
+            }
+
+            fetch('/chat', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.response) {
+                    addMessage({
+                        response: data.response,
+                        translation: data.translation
+                    });
+                    if (data.session_id) {
+                        currentSessionId = data.session_id;
+                    }
+                    loadSessions(currentSessionId);
+                } else if (data.error) {
+                    addMessage('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                addMessage('Sorry, there was an error processing your message.');
+            });
+
+            // Reset image after sending
+            imageInput.value = '';
+            imagePreview.src = '';
+            imagePreview.style.display = 'none';
+            removeImageBtn.style.display = 'none';
+            selectedImageFile = null;
+        }
+
+        function startNewChat() {
+            currentSessionId = null; // Let backend create a new session on first message
+            clearMessages();
+            addMessage("Hello! I'm your AI language tutor. Choose a language and start chatting with me to practice!");
+            loadSessions();
+        }
+
+        function loadSessions(activeSessionId = null) {
+            fetch('/chat_history/sessions')
+                .then(res => res.json())
+                .then(sessions => {
+                    sessionList.innerHTML = '';
+                    if (sessions.length === 0) {
+                        sessionList.innerHTML = '<div style="color:#888; text-align:center;">No previous chats</div>';
+                        return;
+                    }
+                    sessions.forEach(sess => {
+                        const div = document.createElement('div');
+                        div.className = 'session-item dark-theme' + ((sess.session_id === (activeSessionId || currentSessionId)) ? ' active' : '');
+                        
+                        // Create session text container
+                        const sessionText = document.createElement('div');
+                        sessionText.className = 'session-text';
+                        sessionText.textContent = sess.first_message ? sess.first_message.slice(0, 30) : 'New Chat';
+                        sessionText.title = `Started: ${sess.started_at}\nLast: ${sess.last_message_at}`;
+                        sessionText.onclick = () => {
+                            loadSessionMessages(sess.session_id);
+                        };
+                        
+                        // Create delete button
+                        const deleteBtn = document.createElement('button');
+                        deleteBtn.className = 'session-delete-btn';
+                        deleteBtn.innerHTML = '×';
+                        deleteBtn.title = 'Delete this chat';
+                        deleteBtn.onclick = (e) => {
+                            e.stopPropagation(); // Prevent triggering session load
+                            deleteChatSession(sess.session_id);
+                        };
+                        
+                        div.appendChild(sessionText);
+                        div.appendChild(deleteBtn);
+                        sessionList.appendChild(div);
+                    });
+                });
+        }
+
+        function loadSessionMessages(sessionId) {
+            loadingSession = true;
+            fetch(`/chat_history/session/${sessionId}`)
+                .then(res => res.json())
+                .then(messages => {
+                    currentSessionId = sessionId;
+                    clearMessages(); // Ensure messages are cleared
+                    
+                    if (messages.length === 0) {
+                        addMessage("Hello! I'm your AI language tutor. Choose a language and start chatting with me to practice!");
+                        return;
+                    }
+                    
+                    messages.forEach(msg => {
+                        // Add user message
+                        addMessage(msg.message, true);
+                        
+                        // Process and add bot response with translation
+                        const botResponseString = String(msg.bot_response || '');
+                        const responseParts = botResponseString.split('\n');
+                        const targetLanguageResponse = responseParts[0].trim();
+                        const englishTranslation = responseParts.length > 1 ? responseParts[1].trim() : '';
+
+                        // Pass the structured data to addMessage
+                        addMessage({
+                            response: targetLanguageResponse,
+                            translation: englishTranslation
+                        }, false);
+                    });
+                    
+                    // Highlight active session
+                    Array.from(document.getElementsByClassName('session-item')).forEach(item => {
+                        item.classList.remove('active');
+                    });
+                    const items = Array.from(document.getElementsByClassName('session-item'));
+                    const idx = Array.from(sessionList.children).findIndex(div => div.onclick && div.onclick.toString().includes(sessionId));
+                    if (idx >= 0) items[idx].classList.add('active');
+                })
+                .finally(() => { loadingSession = false; });
+        }
+
+        function deleteChatSession(sessionId) {
+            // Show confirmation dialog
+            if (!confirm('Are you sure you want to delete this chat? This action cannot be undone.')) {
+                return;
+            }
+            
+            fetch(`/chat_history/delete/${sessionId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    // If we deleted the currently active session, start a new chat
+                    if (currentSessionId === sessionId) {
+                        startNewChat();
+                    }
+                    
+                    // Reload sessions to update the sidebar
+                    loadSessions();
+                    
+                    // Show success message (optional)
+                    console.log('Chat deleted successfully');
+                } else {
+                    alert('Failed to delete chat: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting chat:', error);
+                alert('Failed to delete chat. Please try again.');
+            });
+        }
+
+        function deleteAllChats() {
+            // Show confirmation dialog with stronger warning
+            if (!confirm('Are you sure you want to delete ALL your chat history? This will permanently delete all your conversations and cannot be undone.')) {
+                return;
+            }
+            
+            fetch('/chat_history/delete_all', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    // Start a new chat since all sessions are deleted
+                    startNewChat();
+                    
+                    // Reload sessions to update the sidebar (should be empty now)
+                    loadSessions();
+                    
+                    // Show success message
+                    alert(data.message || 'All chat history deleted successfully');
+                } else {
+                    alert('Failed to delete chat history: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting all chats:', error);
+                alert('Failed to delete chat history. Please try again.');
+            });
+        }
+
+        // On page load, load sessions and show welcome message
+        window.onload = function() {
+            loadSessions();
+            startNewChat();
+            updateProgressStats();
+        };
+
+        // Progress Tracking Functions
+        function updateProgressStats() {
+            fetch('/get_progress_stats')
+                .then(res => res.json())
+                .then(stats => {
+                    document.getElementById('words-learned').textContent = stats.words_learned;
+                    document.getElementById('conversation-count').textContent = stats.conversation_count;
+                    document.getElementById('accuracy-rate').textContent = stats.accuracy_rate + '%';
+                    document.getElementById('progress-fill').style.width = stats.progress_percentage + '%';
+                    document.getElementById('daily-streak').textContent = stats.daily_streak;
+                })
+                .catch(error => {
+                    console.error('Error fetching progress stats:', error);
+                });
+        }
+
+        // Update progress stats when sending messages
+        const originalSendMessage = sendMessage;
+        sendMessage = function() {
+            originalSendMessage();
+            setTimeout(updateProgressStats, 1000); // Update stats after message is processed
+        };
+
+        messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Add keyboard shortcuts for word selection
+        document.addEventListener('keydown', function(e) {
+            // Ctrl+A or Cmd+A to select all words in latest bot message
+            if ((e.ctrlKey || e.metaKey) && e.key === 'a' && !messageInput.contains(e.target)) {
+                e.preventDefault();
+                const latestBotMessage = document.querySelector('.bot-message:last-of-type');
+                if (latestBotMessage) {
+                    const words = latestBotMessage.querySelectorAll('.bot-word');
+                    words.forEach(word => {
+                        word.classList.add('selected');
+                        word.style.backgroundColor = '#4f8cff';
+                        word.style.color = 'white';
+                    });
+                    updateSelectionCounter();
+                }
+            }
+            
+            // Escape to clear all selections
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.bot-word.selected').forEach(word => {
+                    word.classList.remove('selected');
+                    word.style.backgroundColor = '';
+                    word.style.color = '';
+                });
+                updateSelectionCounter();
+            }
+        });
+
+        // --- Study List UI (Enhanced) ---
+        function toggleStudyList() {
+            const sidebar = document.getElementById('study-list-sidebar');
+            if (sidebar.style.display === 'none') {
+                sidebar.style.display = '';
+                loadStudyList();
+            } else {
+                sidebar.style.display = 'none';
+                exitReviewMode();
+            }
+        }
+        function loadStudyList() {
+            fetch('/study_list')
+                .then(res => res.json())
+                .then(words => {
+                    studyList = words.map(w => w.word);
+                    const container = document.getElementById('study-list-words');
+                    container.innerHTML = '';
+                    if (words.length === 0) {
+                        container.innerHTML = '<div style="color:#888;text-align:center;">No words yet. Add from chat!</div>';
+                        return;
+                    }
+                    // Review mode button
+                    container.innerHTML += '<button class="review-mode-btn dark-theme" onclick="startReviewMode()">Review Mode</button>';
+                    words.forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = 'study-list-word-item dark-theme'; // Add dark theme class
+                        div.innerHTML = `<div class="word-and-actions"><span>${item.word}</span><button class="remove-word-btn" onclick="removeFromStudyList('${encodeURIComponent(item.word)}')">&times;</button></div>` +
+                            `<input class='note-input dark-theme' type='text' placeholder='Add note...' value="${item.note || ''}" onchange="saveNote('${encodeURIComponent(item.word)}', this.value)">` + // Add dark theme class
+                            `<button class='save-note-btn dark-theme' onclick="saveNote('${encodeURIComponent(item.word)}', this.previousElementSibling.value)">💾</button>`; // Add dark theme class
+                        container.appendChild(div);
+                    });
+                });
+        }
+        function addToStudyList(words, btn) {
+            if (!words || words.length === 0) return;
+            
+            // Show loading state
+            if (btn) {
+                btn.textContent = `Adding ${words.length} word${words.length > 1 ? 's' : ''}...`;
+                btn.disabled = true;
+            }
+            
+            fetch('/add_to_study_list', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ words, language: languageSelect.value })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    if (btn) {
+                        btn.textContent = `✅ Added ${data.added || words.length} word${(data.added || words.length) > 1 ? 's' : ''}!`;
+                        btn.classList.add('added');
+                        btn.style.background = '#27ae60';
+                        
+                        // Reset button after 2 seconds
+                        setTimeout(() => {
+                            btn.textContent = 'Add Selected to Study List (0)';
+                            btn.classList.remove('added');
+                            btn.style.background = '';
+                            btn.disabled = false;
+                        }, 2000);
+                    }
+                    
+                    // Clear all selections with animation
+                    document.querySelectorAll('.bot-word.selected').forEach(el => {
+                        el.style.transition = 'all 0.3s ease';
+                        el.style.transform = 'scale(0.9)';
+                        el.style.opacity = '0.5';
+                        
+                        setTimeout(() => {
+                            el.classList.remove('selected');
+                            el.style.backgroundColor = '';
+                            el.style.color = '';
+                            el.style.transform = '';
+                            el.style.opacity = '';
+                        }, 300);
+                    });
+                    
+                    updateSelectionCounter();
+                    loadStudyList();
+                    
+                    // Show success message
+                    console.log(`Successfully added ${data.added || words.length} words to study list!`);
+                }
+            })
+            .catch(error => {
+                console.error('Error adding to study list:', error);
+                if (btn) {
+                    btn.textContent = '❌ Error adding words';
+                    btn.style.background = '#e74c3c';
+                    setTimeout(() => {
+                        btn.textContent = 'Add Selected to Study List (0)';
+                        btn.style.background = '';
+                        btn.disabled = false;
+                    }, 2000);
+                }
+            });
+        }
+        function removeFromStudyList(word) {
+            word = decodeURIComponent(word);
+            fetch('/remove_from_study_list', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ word })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    loadStudyList(); // Reload study list after removal
+                }
+            });
+        }
+        function saveNote(word, note) {
+            word = decodeURIComponent(word);
+            fetch('/save_study_note', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ word, note })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Note saved, no need to reload the whole list
+                    console.log('Note saved successfully');
+                }
+            });
+        }
+        // --- Review Mode (Enhanced Aesthetics) ---
+        function startReviewMode() {
+            reviewMode = true;
+            fetch('/study_list')
+                .then(res => res.json())
+                .then(words => {
+                    // Filter out words with empty notes if you only want to review words with notes
+                    // reviewWords = words.filter(w => w.note && w.note.trim() !== '').map(w => ({ word: w.word, note: w.note }));
+                    reviewWords = words.map(w => ({ word: w.word, note: w.note }));
+                    reviewIndex = 0;
+                    document.getElementById('study-list-words').innerHTML = ''; // Clear content
+                    showReviewWord();
+                });
+        }
+        function showReviewWord() {
+            const container = document.getElementById('study-list-words');
+            if (!reviewWords.length) {
+                container.innerHTML = '<div style="color:#888;text-align:center;margin-top:20px;">No words to review. Add some first!</div>';
+                return;
+            }
+            const item = reviewWords[reviewIndex];
+            container.innerHTML = `
+                <div class="review-card dark-theme">
+                    <div class="review-word">${item.word}</div>
+                    <div class="review-note-section">
+                        <div class="note-label">Note:</div>
+                        <div class="review-note">${item.note || 'No note yet.'}</div>
+                    </div>
+                    <div class="review-controls">
+                        <button onclick='prevReviewWord()' class="review-nav-btn dark-theme">&lt; Prev</button>
+                        <button onclick='exitReviewMode()' class="review-exit-btn dark-theme">Exit</button>
+                        <button onclick='nextReviewWord()' class="review-nav-btn dark-theme">Next &gt;</button>
+                    </div>
+                    <div class="review-counter">${reviewIndex + 1} / ${reviewWords.length}</div>
+                </div>
+            `;
+        }
+        function nextReviewWord() {
+            if (reviewIndex < reviewWords.length - 1) reviewIndex++;
+            else reviewIndex = 0; // Loop back to the beginning
+            showReviewWord();
+        }
+        function prevReviewWord() {
+            if (reviewIndex > 0) reviewIndex--;
+            else reviewIndex = reviewWords.length - 1; // Loop to the end
+            showReviewWord();
+        }
+        function exitReviewMode() {
+            reviewMode = false;
+            loadStudyList();
+        }
+
+        // --- Pronunciation Checker JS ---
+        const micBtn = document.getElementById('mic-btn');
+        const transcriptDiv = document.getElementById('transcript');
+        const feedbackDiv = document.getElementById('pronunciation-feedback');
+        const liveTranscriptDiv = document.getElementById('live-speech-transcript');
+        let recognition;
+        let lastExpectedPhrase = '';
+        let hasRestarted = false; // Prevent infinite restart loops
+        let listeningIndicator = null;
+
+        // Add a visual indicator for listening
+        function showListeningIndicator() {
+            if (!listeningIndicator) {
+                listeningIndicator = document.createElement('span');
+                listeningIndicator.id = 'listening-indicator';
+                listeningIndicator.style.marginLeft = '10px';
+                listeningIndicator.style.color = '#4a90e2';
+                listeningIndicator.textContent = '🎤 Listening...';
+                micBtn.parentNode.appendChild(listeningIndicator);
+            }
+        }
+        function hideListeningIndicator() {
+            if (listeningIndicator && listeningIndicator.parentNode) {
+                listeningIndicator.parentNode.removeChild(listeningIndicator);
+                listeningIndicator = null;
+            }
+        }
+
+        // Helper: get the last bot message (target language response)
+        function getLastBotPhrase() {
+            const botMessages = document.querySelectorAll('.bot-message .target-language-response');
+            if (botMessages.length > 0) {
+                // Get the last bot message's text
+                return botMessages[botMessages.length - 1].innerText.trim();
+            }
+            return '';
+        }
+
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'en-US'; // Default, will set dynamically
+            recognition.interimResults = true; // Enable interim results for live transcript
+            recognition.maxAlternatives = 1;
+            recognition.continuous = false; // Only listen for one phrase at a time
+
+            micBtn.onclick = () => {
+                // Set language based on selector
+                const lang = languageSelect.value;
+                // Map language to BCP-47 code
+                const langMap = {
+                    english: 'en-US',
+                    spanish: 'es-ES',
+                    french: 'fr-FR',
+                    german: 'de-DE',
+                    italian: 'it-IT',
+                    portuguese: 'pt-PT',
+                    chinese: 'zh-CN',
+                    japanese: 'ja-JP',
+                    korean: 'ko-KR'
+                };
+                recognition.lang = langMap[lang] || 'en-US';
+                transcriptDiv.textContent = 'Listening...';
+                feedbackDiv.textContent = '';
+                liveTranscriptDiv.textContent = '';
+                hasRestarted = false;
+                showListeningIndicator();
+                recognition.start();
+            };
+
+            recognition.onaudiostart = function() {
+                console.log('Audio capturing started');
+            };
+            recognition.onsoundstart = function() {
+                console.log('Sound has been detected');
+            };
+            recognition.onspeechstart = function() {
+                console.log('Speech has been detected');
+            };
+            recognition.onspeechend = function() {
+                console.log('Speech has stopped being detected');
+            };
+            recognition.onsoundend = function() {
+                console.log('Sound has stopped being detected');
+            };
+            recognition.onaudioend = function() {
+                console.log('Audio capturing ended');
+            };
+            recognition.onend = function() {
+                console.log('Recognition ended');
+                hideListeningIndicator();
+            };
+
+            recognition.onresult = (event) => {
+                hideListeningIndicator();
+                let interim = '';
+                let final = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        final += event.results[i][0].transcript;
+                    } else {
+                        interim += event.results[i][0].transcript;
+                    }
+                }
+                // Show live transcript (final + interim)
+                liveTranscriptDiv.textContent = final + interim;
+                // Show final transcript in the old area for compatibility
+                if (final) {
+                    transcriptDiv.textContent = `You said: ${final}`;
+                }
+                // Only check pronunciation if we have a final result
+                if (final) {
+                    // Get the last bot phrase (expected phrase)
+                    const expected = getLastBotPhrase();
+                    lastExpectedPhrase = expected;
+                    if (expected) {
+                        // Send to backend for pronunciation/similarity check
+                        fetch('/check_pronunciation', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                expected: expected,
+                                spoken: final,
+                                language: languageSelect.value
+                            })
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                            feedbackDiv.textContent = data.feedback || `Similarity: ${data.similarity}%`;
+                        })
+                        .catch(() => {
+                            feedbackDiv.textContent = 'Error checking pronunciation.';
+                        });
+                    } else {
+                        feedbackDiv.textContent = 'Say the last phrase shown by the bot!';
+                    }
+                }
+            };
+
+            recognition.onerror = (event) => {
+                hideListeningIndicator();
+                console.log('Speech recognition error:', event.error);
+                if (event.error === 'no-speech' && !hasRestarted) {
+                    transcriptDiv.textContent = 'No speech detected, please try again...';
+                    hasRestarted = true;
+                    setTimeout(() => {
+                        showListeningIndicator();
+                        recognition.start();
+                    }, 500);
+                } else if (event.error === 'not-allowed' || event.error === 'denied') {
+                    transcriptDiv.textContent = 'Microphone access denied. Please allow microphone permissions in your browser.';
+                    feedbackDiv.textContent = '';
+                } else {
+                    transcriptDiv.textContent = 'Error: ' + event.error;
+                    feedbackDiv.textContent = '';
+                }
+            };
+        } else {
+            micBtn.disabled = true;
+            transcriptDiv.textContent = 'Speech recognition not supported.';
+        }
+        // --- End Pronunciation Checker JS ---
+
+        // Image upload preview and remove logic
+        const imageInput = document.getElementById('chatbot-image-input');
+        const imagePreview = document.getElementById('chatbot-image-preview');
+        const removeImageBtn = document.getElementById('remove-image-btn');
+        imageInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                selectedImageFile = this.files[0];
+                if (imageObjectUrl) {
+                    URL.revokeObjectURL(imageObjectUrl);
+                }
+                imageObjectUrl = URL.createObjectURL(this.files[0]);
+                imagePreview.src = imageObjectUrl;
+                imagePreview.style.display = 'block';
+                removeImageBtn.style.display = 'inline-block';
+            } else {
+                if (imageObjectUrl) {
+                    URL.revokeObjectURL(imageObjectUrl);
+                    imageObjectUrl = null;
+                }
+                imagePreview.src = '';
+                imagePreview.style.display = 'none';
+                removeImageBtn.style.display = 'none';
+                selectedImageFile = null;
+            }
+        });
+        removeImageBtn.addEventListener('click', function() {
+            imageInput.value = '';
+            if (imageObjectUrl) {
+                URL.revokeObjectURL(imageObjectUrl);
+                imageObjectUrl = null;
+            }
+            imagePreview.src = '';
+            imagePreview.style.display = 'none';
+            removeImageBtn.style.display = 'none';
+            selectedImageFile = null;
+        });
+    </script>
+</body>
+</html>

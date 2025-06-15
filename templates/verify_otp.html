@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify OTP</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        body {
+            background: #181a1b;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .otp-card {
+            background: #23272a;
+            border-radius: 16px;
+            box-shadow: 0 4px 32px rgba(0,0,0,0.25);
+            padding: 2.5rem 2.2rem 2.2rem 2.2rem;
+            max-width: 400px;
+            width: 100%;
+            margin: 0 auto;
+        }
+        .otp-card h2 {
+            color: #fff;
+            font-size: 1.5rem;
+            margin-bottom: 1.2rem;
+            font-weight: 600;
+        }
+        .otp-card .main-message {
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+            color: #fff;
+        }
+        .otp-code {
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: #fff;
+            margin-bottom: 1.5rem;
+        }
+        .otp-validity {
+            color: #b0b0b0;
+            font-size: 1rem;
+            margin-bottom: 1.2rem;
+        }
+        .otp-footer {
+            color: #b0b0b0;
+            font-size: 1rem;
+            margin-top: 1.5rem;
+            border-top: 1px solid #333;
+            padding-top: 1.2rem;
+        }
+        .error-message {
+            color: #ff3333;
+            margin: 10px 0;
+        }
+        .resend-link {
+            color: #4fa3ff;
+            text-decoration: underline;
+            font-size: 0.98rem;
+            margin-top: 0.7rem;
+            display: inline-block;
+        }
+        .resend-link:hover {
+            color: #82cfff;
+        }
+        .otp-form label {
+            color: #b0b0b0;
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+        .otp-form input[type="text"] {
+            width: 100%;
+            padding: 0.7rem;
+            border-radius: 8px;
+            border: 1px solid #444;
+            background: #181a1b;
+            color: #fff;
+            font-size: 1.1rem;
+            margin-bottom: 1.2rem;
+        }
+        .otp-form button {
+            width: 100%;
+            padding: 0.8rem;
+            border-radius: 8px;
+            border: none;
+            background: #4fa3ff;
+            color: #fff;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .otp-form button:hover {
+            background: #357ab8;
+        }
+    </style>
+</head>
+<body>
+    <div class="otp-card">
+        <h2>Hello,</h2>
+        <div class="main-message">Your verification code is:</div>
+        <div class="otp-code">{{ otp_code if otp_code else '------' }}</div>
+        <div class="otp-validity">This code is valid for 10 minutes.<br>If you did not request this code, please ignore this email.</div>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <p class="error-message">{{ message }}</p>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        {% if error %}
+            <p class="error-message">{{ error }}</p>
+        {% endif %}
+        <form method="POST" class="otp-form">
+            <label for="otp">Enter the 6-digit code:</label>
+            <input type="text" id="otp" name="otp" required pattern="[0-9]{6}" maxlength="6" placeholder="Enter 6-digit code">
+            <button type="submit">Verify</button>
+        </form>
+        <a href="{{ url_for('resend_otp') }}" class="resend-link">Resend verification code</a>
+        <div class="otp-footer">
+            Best regards,<br>Language Learning App Team
+        </div>
+    </div>
+</body>
+</html>

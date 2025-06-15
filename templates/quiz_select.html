@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Language Quiz | Select Difficulty</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --accent-color: #4895ef;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+        }
+
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .quiz-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .quiz-header h1 {
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        .quiz-header p {
+            color: var(--dark-color);
+            opacity: 0.8;
+            font-size: 1.1rem;
+        }
+
+        .difficulty-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .difficulty-card {
+            width: 280px;
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: none;
+            text-align: center;
+        }
+
+        .difficulty-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+        }
+
+        .difficulty-card.beginner {
+            border-top: 4px solid #4cc9f0;
+        }
+
+        .difficulty-card.intermediate {
+            border-top: 4px solid #4895ef;
+        }
+
+        .difficulty-card.advanced {
+            border-top: 4px solid #4361ee;
+        }
+
+        .difficulty-card h3 {
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--dark-color);
+        }
+
+        .difficulty-card p {
+            color: #6c757d;
+            margin-bottom: 1rem;
+        }
+
+        .difficulty-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+            background: rgba(67, 97, 238, 0.1);
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            margin: 0 auto 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .difficulty-card:hover .difficulty-icon {
+            transform: scale(1.1);
+            background: rgba(67, 97, 238, 0.2);
+        }
+
+        .difficulty-badge {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(67, 97, 238, 0.1);
+            color: var(--primary-color);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .features-list {
+            text-align: left;
+            margin-bottom: 1.5rem;
+        }
+
+        .feature {
+            margin-bottom: 0.5rem;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .feature i {
+            color: #28a745;
+            margin-right: 0.5rem;
+        }
+
+        .language-selector {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .language-flags {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .language-option {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            padding: 0.75rem;
+            border-radius: 8px;
+            width: 100px;
+        }
+
+        .language-option:hover {
+            background: rgba(67, 97, 238, 0.1);
+            transform: translateY(-3px);
+        }
+
+        .language-option.selected {
+            background: rgba(67, 97, 238, 0.2);
+            border: 2px solid var(--primary-color);
+        }
+
+        .language-flag {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .language-name {
+            font-weight: 500;
+            color: var(--dark-color);
+        }
+
+        select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        select:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.25);
+            outline: none;
+        }
+
+        .loading-message {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .loading-message p {
+            margin-top: 1rem;
+            font-size: 1.2rem;
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .home-btn {
+            position: fixed;
+            top: 1.5rem;
+            left: 1.5rem;
+            background: var(--primary-color);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            z-index: 1000;
+        }
+
+        .home-btn:hover {
+            background: var(--secondary-color);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .progress-impact {
+            background: rgba(108, 117, 125, 0.1);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .progress-impact h5 {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .progress-impact ul {
+            padding-left: 1.5rem;
+            margin-bottom: 0;
+        }
+
+        .progress-impact li {
+            margin-bottom: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .difficulty-card {
+                width: 100%;
+                max-width: 350px;
+            }
+
+            .home-btn {
+                position: static;
+                margin-bottom: 1rem;
+                display: inline-flex;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="{{ url_for('dashboard') }}" class="home-btn">
+        <i class="fas fa-arrow-left"></i> Dashboard
+    </a>
+
+    <div class="container my-5 py-4">
+        <div class="quiz-header">
+            <h1>Language Learning Quiz</h1>
+            <p>Test your knowledge, earn points, and track your progress</p>
+        </div>
+
+        <div class="language-selector mb-5">
+            <label for="language" class="form-label fw-bold mb-2">Choose a language to practice:</label>
+            <div class="language-flags">
+                {% for language in languages %}
+                <div class="language-option" data-value="{{ language }}">
+                    <div class="language-flag">
+                        {% if language == 'English' %}
+                        <span class="flag-icon">🇺🇸</span>
+                        {% elif language == 'Spanish' %}
+                        <span class="flag-icon">🇪🇸</span>
+                        {% elif language == 'French' %}
+                        <span class="flag-icon">🇫🇷</span>
+                        {% elif language == 'Chinese' %}
+                        <span class="flag-icon">🇨🇳</span>
+                        {% elif language == 'Malay' %}
+                        <span class="flag-icon">🇲🇾</span>
+                        {% elif language == 'Portuguese' %}
+                        <span class="flag-icon">🇵🇹</span>
+                        {% elif language == 'Tamil' %}
+                        <span class="flag-icon">🇮🇳</span>
+                        {% else %}
+                        <span class="flag-icon">🌐</span>
+                        {% endif %}
+                    </div>
+                    <span class="language-name">{{ language }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            <select id="language" name="language" class="form-select d-none">
+                {% for language in languages %}
+                <option value="{{ language }}">{{ language }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <h2 class="text-center mb-4 fw-bold" style="color: var(--dark-color);">Select Your Challenge Level</h2>
+
+        <div class="difficulty-container">
+            <div class="difficulty-card beginner" onclick="startQuiz('beginner')">
+                <div class="difficulty-icon">
+                    <i class="fas fa-seedling"></i>
+                </div>
+                <div class="difficulty-badge">10 Questions</div>
+                <h3>Beginner</h3>
+                <p>Basic vocabulary and simple sentences</p>
+                <div class="features-list">
+                    <div class="feature"><i class="fas fa-check-circle"></i> Multiple choice questions</div>
+                    <div class="feature"><i class="fas fa-check-circle"></i> Word matching exercises</div>
+                    <div class="feature"><i class="fas fa-check-circle"></i> Fill-in-the-blank sentences</div>
+                </div>
+                <button class="btn btn-outline-primary w-100">Start Beginner Quiz</button>
+            </div>
+
+            <div class="difficulty-card intermediate" onclick="startQuiz('intermediate')">
+                <div class="difficulty-icon">
+                    <i class="fas fa-language"></i>
+                </div>
+                <div class="difficulty-badge">10 Questions</div>
+                <h3>Intermediate</h3>
+                <p>Common phrases and grammar concepts</p>
+                <div class="features-list">
+                    <div class="feature"><i class="fas fa-check-circle"></i> Phrase completion</div>
+                    <div class="feature"><i class="fas fa-check-circle"></i> Error spotting</div>
+                    <div class="feature"><i class="fas fa-check-circle"></i> Context responses</div>
+                </div>
+                <button class="btn btn-outline-primary w-100">Start Intermediate Quiz</button>
+            </div>
+
+            <div class="difficulty-card advanced" onclick="startQuiz('advanced')">
+                <div class="difficulty-icon">
+                    <i class="fas fa-brain"></i>
+                </div>
+                <div class="difficulty-badge">10 Questions</div>
+                <h3>Advanced</h3>
+                <p>Complex sentences and idioms</p>
+                <div class="features-list">
+                    <div class="feature"><i class="fas fa-check-circle"></i> Idiom interpretation</div>
+                    <div class="feature"><i class="fas fa-check-circle"></i> Cultural nuances</div>
+                    <div class="feature"><i class="fas fa-check-circle"></i> Complex rephrasing</div>
+                </div>
+                <button class="btn btn-outline-primary w-100">Start Advanced Quiz</button>
+            </div>
+        </div>
+
+        <div class="progress-impact mt-5">
+            <h5><i class="fas fa-bullseye"></i> Progress Impact</h5>
+            <p>Completing quizzes will:</p>
+            <ul>
+                {% if progress %}
+                    {% if progress.current_level == 'advanced' %}
+                        <li>Earn <strong>5 points per correct answer</strong> (Advanced quizzes only)</li>
+                        <li>Get <strong>10 bonus points</strong> for perfect score</li>
+                        <li><strong>No points</strong> for Beginner or Intermediate quizzes</li>
+                    {% elif progress.current_level == 'intermediate' %}
+                        <li>Earn <strong>3 points per correct answer</strong> (Intermediate or Advanced quizzes)</li>
+                        <li>Get <strong>8 bonus points</strong> for perfect score</li>
+                        <li><strong>No points</strong> for Beginner quizzes</li>
+                    {% else %}
+                        <li>Earn <strong>1 point per correct answer</strong></li>
+                        <li>Get <strong>5 bonus points</strong> for perfect score</li>
+                    {% endif %}
+                {% else %}
+                    <li>Earn <strong>1 point per correct answer</strong></li>
+                    <li>Get <strong>5 bonus points</strong> for perfect score</li>
+                {% endif %}
+                <li>Count toward your <strong>level progression</strong></li>
+                <li>Help unlock <strong>achievements and badges</strong></li>
+            </ul>
+            {% if progress %}
+            <div class="mt-3">
+                <p>Your current points: <strong>{{ progress.total_points }}</strong></p>
+                <div class="progress" style="height: 8px;">
+                    {% set max_points = 1500 %}
+                    {% set width_percent = ((progress.total_points / max_points) * 100)|round(1)|string %}
+                    <div class="progress-bar bg-primary" role="progressbar"
+                    data-percent="{{ ((progress.total_points / max_points) * 100)|round(1) }}"
+                    aria-valuenow="{{ progress.total_points }}"
+                    aria-valuemin="0"
+                    aria-valuemax="{{ max_points }}"></div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Language selector functionality
+            const languageOptions = document.querySelectorAll('.language-option');
+            const languageSelect = document.getElementById('language');
+
+            // Set the first language as selected by default
+            if (languageOptions.length > 0) {
+                languageOptions[0].classList.add('selected');
+                languageSelect.value = languageOptions[0].dataset.value;
+            }
+
+            languageOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    // Remove selected class from all options
+                    languageOptions.forEach(opt => opt.classList.remove('selected'));
+
+                    // Add selected class to clicked option
+                    this.classList.add('selected');
+
+                    // Update the hidden select value
+                    languageSelect.value = this.dataset.value;
+
+                    // Add animation effect
+                    this.style.animation = 'pulse 0.5s';
+                    setTimeout(() => {
+                        this.style.animation = '';
+                    }, 500);
+                });
+            });
+
+            // Add hover effects to difficulty cards
+            const difficultyCards = document.querySelectorAll('.difficulty-card');
+            difficultyCards.forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.querySelector('button').classList.remove('btn-outline-primary');
+                    this.querySelector('button').classList.add('btn-primary');
+                });
+
+                card.addEventListener('mouseleave', function() {
+                    this.querySelector('button').classList.remove('btn-primary');
+                    this.querySelector('button').classList.add('btn-outline-primary');
+                });
+            });
+        });
+
+        function startQuiz(difficulty) {
+            const language = document.getElementById('language').value;
+            if (language) {
+                // Add loading animation
+                document.body.classList.add('loading');
+
+                // Show loading message
+                const loadingMsg = document.createElement('div');
+                loadingMsg.className = 'loading-message';
+                loadingMsg.innerHTML = `
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p>Preparing your ${difficulty} ${language} quiz...</p>
+                `;
+                document.body.appendChild(loadingMsg);
+
+                // Navigate to quiz page after a short delay
+                setTimeout(() => {
+                    const encodedLanguage = encodeURIComponent(language);
+                    const encodedDifficulty = encodeURIComponent(difficulty);
+                    const quizUrl = `/quiz/questions?language=${encodedLanguage}&difficulty=${encodedDifficulty}`;
+                    window.location.href = quizUrl;
+                }, 800);
+            } else {
+                alert('Please select a language first');
+            }
+        }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

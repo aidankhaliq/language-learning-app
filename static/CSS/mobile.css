@@ -1,0 +1,122 @@
+/* Mobile Responsive Styles */
+@media screen and (max-width: 768px) {
+    .container {
+        padding: 0 15px;
+    }
+
+    .language-card {
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .language-header {
+        flex-direction: column;
+        text-align: center;
+        gap: 0.75rem;
+    }
+
+    .language-header i {
+        font-size: 2rem;
+    }
+
+    .language-header h2 {
+        font-size: 1.5rem;
+    }
+
+    .level-tracker {
+        margin: 2rem 0;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .level {
+        flex: 0 0 100%;
+        margin-bottom: 1rem;
+    }
+
+    .level-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+        margin-bottom: 15px;
+    }
+
+    .level-badge {
+        font-size: 0.9rem !important;
+        padding: 6px 12px !important;
+    }
+
+    .current-points {
+        font-size: 1rem;
+        padding: 0.4rem 0.8rem;
+        float: none;
+        text-align: center;
+        margin: 1rem 0;
+    }
+
+    .level-tracker::before,
+    .level-tracker::after {
+        top: 25px;
+        height: 8px;
+    }
+
+    .level.active {
+        transform: scale(1.05);
+    }
+
+    .level.active .level-icon {
+        transform: scale(1.05);
+    }
+
+    /* Adjust card layouts for mobile */
+    .row {
+        margin: 0;
+    }
+
+    .col-md-6 {
+        padding: 0 10px;
+    }
+
+    /* Improve touch targets */
+    button, 
+    .btn,
+    .level-badge {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    /* Adjust spacing for better mobile readability */
+    .mb-4 {
+        margin-bottom: 1rem !important;
+    }
+
+    .mt-4 {
+        margin-top: 1rem !important;
+    }
+
+    /* Improve scrolling experience */
+    .language-card {
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* Small mobile devices */
+@media screen and (max-width: 480px) {
+    .language-header h2 {
+        font-size: 1.3rem;
+    }
+
+    .level-badge {
+        font-size: 0.8rem !important;
+        padding: 5px 10px !important;
+    }
+
+    .current-points {
+        font-size: 0.9rem;
+    }
+
+    .language-card {
+        padding: 1rem;
+    }
+} 
