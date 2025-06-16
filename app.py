@@ -3300,16 +3300,22 @@ def get_flashcards(language):
                                 for pair in pairs:
                                     if isinstance(pair, dict) and 'key' in pair and 'value' in pair:
                                         options.extend([pair['key'], pair['value']])
-                                        correct_pairs.append(f"{pair['key']} : {pair['value']}")
-                                answer = ' | '.join(correct_pairs)
+                                        correct_pairs.append(f"{pair['key']} ↔ {pair['value']}")
+                                # Limit answer length for better display
+                                answer = '\n'.join(correct_pairs[:3])  # Show max 3 pairs
+                                if len(correct_pairs) > 3:
+                                    answer += f"\n... and {len(correct_pairs)-3} more pairs"
                             elif isinstance(options_data, list):
                                 options = []
                                 correct_pairs = []
                                 for pair in options_data:
                                     if isinstance(pair, list) and len(pair) >= 2:
                                         options.extend([pair[0], pair[1]])
-                                        correct_pairs.append(f"{pair[0]} : {pair[1]}")
-                                answer = ' | '.join(correct_pairs)
+                                        correct_pairs.append(f"{pair[0]} ↔ {pair[1]}")
+                                # Limit answer length for better display
+                                answer = '\n'.join(correct_pairs[:3])  # Show max 3 pairs
+                                if len(correct_pairs) > 3:
+                                    answer += f"\n... and {len(correct_pairs)-3} more pairs"
                             else:
                                 options = list(options_data.values()) if options_data else []
                         elif isinstance(options_data, dict):
