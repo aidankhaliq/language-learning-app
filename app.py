@@ -103,7 +103,49 @@ def get_db_connection():
     # Initialize database tables if they don't exist
     _initialize_database_tables(conn)
     
+    # Also call ensure_user_columns to create any additional tables
+    try:
+        ensure_user_columns_on_connection(conn)
+    except Exception as e:
+        print(f"Error in ensure_user_columns_on_connection: {e}")
+    
     return conn
+
+def ensure_user_columns_on_connection(conn):
+    """Ensures all required tables exist on the given connection"""
+    try:
+        # Create study_list table if it doesn't exist
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS study_list (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                word TEXT NOT NULL,
+                added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                note TEXT,
+                language TEXT DEFAULT 'english',
+                FOREIGN KEY (user_id) REFERENCES users (id),
+                UNIQUE(user_id, word)
+            )
+        ''')
+        
+        # Create user_progress table if it doesn't exist
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS user_progress (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                words_learned INTEGER DEFAULT 0,
+                conversation_count INTEGER DEFAULT 0,
+                accuracy_rate FLOAT DEFAULT 0.0,
+                daily_streak INTEGER DEFAULT 0,
+                last_activity_date DATE,
+                last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            )
+        ''')
+        
+        conn.commit()
+    except Exception as e:
+        print(f"Error creating additional tables: {e}")
 
 def _initialize_database_tables(conn):
     """Initialize database tables if they don't exist"""
@@ -205,6 +247,48 @@ def _initialize_database_tables(conn):
                     points_earned INTEGER DEFAULT 0,
                     streak_bonus INTEGER DEFAULT 0,
                     time_bonus INTEGER DEFAULT 0,
+                    FOREIGN KEY (user_id) REFERENCES users (id)
+                )
+            ''')
+            
+            # Create study list table for word tracking
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS study_list (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    word TEXT NOT NULL,
+                    added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    note TEXT,
+                    language TEXT DEFAULT 'english',
+                    FOREIGN KEY (user_id) REFERENCES users (id),
+                    UNIQUE(user_id, word)
+                )
+            ''')
+            
+            # Create user progress table for metrics tracking
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS user_progress (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    words_learned INTEGER DEFAULT 0,
+                    conversation_count INTEGER DEFAULT 0,
+                    accuracy_rate FLOAT DEFAULT 0.0,
+                    daily_streak INTEGER DEFAULT 0,
+                    last_activity_date DATE,
+                    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users (id)
+                )
+            ''')
+            
+            # Create achievements table
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS achievements (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    achievement_type TEXT NOT NULL,
+                    achievement_name TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    earned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (user_id) REFERENCES users (id)
                 )
             ''')
@@ -2628,6 +2712,9 @@ def add_to_study_list():
     data = request.get_json()
     words = data.get('words')
     language = data.get('language', 'english').strip()
+    
+    print(f"Add to study list - User: {session['user_id']}, Words: {words}, Language: {language}")
+    
     if words and isinstance(words, list):
         added = 0
         with get_db_connection() as conn:
@@ -2636,20 +2723,43 @@ def add_to_study_list():
                 if not word:
                     continue
                 try:
+                    # First check if language column exists, if not add it
+                    try:
+                        conn.execute('ALTER TABLE study_list ADD COLUMN language TEXT DEFAULT "english"')
+                        conn.commit()
+                        print("Added language column to study_list table")
+                    except:
+                        pass  # Column already exists
+                    
                     conn.execute('INSERT OR IGNORE INTO study_list (user_id, word, language, added_at, note) VALUES (?, ?, ?, CURRENT_TIMESTAMP, NULL)', (session['user_id'], word, language))
-                    added += 1
+                    if conn.total_changes > 0:
+                        added += 1
+                        print(f"Successfully added word: {word}")
+                    else:
+                        print(f"Word already exists: {word}")
                 except Exception as e:
                     print(f"Error adding word '{word}' to study list: {e}")
             conn.commit()
+        print(f"Total words added: {added}")
         return jsonify({'status': 'success', 'added': added})
+    
     # Fallback to single word
     word = data.get('word', '').strip()
     if not word:
         return jsonify({'status': 'error', 'message': 'No word provided'}), 400
     try:
         with get_db_connection() as conn:
-            conn.execute('INSERT OR IGNORE INTO study_list (user_id, word, language, added_at, note) VALUES (?, ?, ?, CURRENT_TIMESTAMP, NULL)', (session['user_id'], word, language))
+            # First check if language column exists, if not add it
+            try:
+                conn.execute('ALTER TABLE study_list ADD COLUMN language TEXT DEFAULT "english"')
+                conn.commit()
+                print("Added language column to study_list table")
+            except:
+                pass  # Column already exists
+                
+            result = conn.execute('INSERT OR IGNORE INTO study_list (user_id, word, language, added_at, note) VALUES (?, ?, ?, CURRENT_TIMESTAMP, NULL)', (session['user_id'], word, language))
             conn.commit()
+            print(f"Single word add result - Word: {word}, Changes: {conn.total_changes}")
         return jsonify({'status': 'success'})
     except Exception as e:
         print(f"Error in add_to_study_list: {e}")
@@ -2731,11 +2841,13 @@ def get_progress_stats():
                 'SELECT COUNT(*) as count FROM study_list WHERE user_id = ?',
                 (session['user_id'],)
             ).fetchone()['count']
+            print(f"Progress Stats - User {session['user_id']}: Words learned = {words_learned}")
 
             conversation_count = conn.execute(
                 'SELECT COUNT(DISTINCT session_id) as count FROM chat_sessions WHERE user_id = ?',
                 (session['user_id'],)
             ).fetchone()['count']
+            print(f"Progress Stats - User {session['user_id']}: Conversations = {conversation_count}")
 
             # Calculate accuracy rate from quiz results
             quiz_stats = conn.execute('''
