@@ -1502,9 +1502,7 @@ def chat():
             prompt = f"""
 You are a helpful and encouraging language tutor. The user has uploaded an image and asked: '{message}'.
 
-1. First, carefully analyze the image and provide a detailed description of what is shown, including any objects, people, text, or context. If possible, include interesting facts or cultural notes about what you see.
-2. Then, translate your description into {language} in a clear and natural way, as if explaining to a language learner.
-3. Finally, provide the English translation of your {language} response on a new line.
+Analyze the image and provide a clear, concise description in {language} that addresses the user's question. Then provide the English translation.
 
 Format your response exactly like this:
 [Response in {language}]
@@ -1586,9 +1584,40 @@ Response:
                 response_text = f"[Sorry, I'm having trouble processing your message right now. Please try again.]\n[Sorry, I'm having trouble processing your message right now. Please try again.]"
         
         # Split the response into the target language response and English translation
-        response_parts = response_text.split('\n', 1)
-        target_language_response = response_parts[0].strip()
-        english_translation = response_parts[1].strip() if len(response_parts) > 1 else ""
+        # Handle various response formats and clean up any duplications
+        lines = [line.strip() for line in response_text.split('\n') if line.strip()]
+        
+        # Find the target language response and English translation
+        target_language_response = ""
+        english_translation = ""
+        
+        # Remove any duplicate or repetitive lines
+        unique_lines = []
+        for line in lines:
+            # Skip if this line is very similar to any previous line
+            is_duplicate = False
+            for existing_line in unique_lines:
+                # Check if lines are similar (allowing for small differences)
+                if len(line) > 50 and len(existing_line) > 50:
+                    # For longer lines, check for substantial overlap
+                    similarity = len(set(line.lower().split()) & set(existing_line.lower().split())) / max(len(set(line.lower().split())), len(set(existing_line.lower().split())))
+                    if similarity > 0.7:  # 70% word overlap indicates duplication
+                        is_duplicate = True
+                        break
+            
+            if not is_duplicate:
+                unique_lines.append(line)
+        
+        # Now extract the target language and English responses
+        if len(unique_lines) >= 2:
+            target_language_response = unique_lines[0]
+            english_translation = unique_lines[1]
+        elif len(unique_lines) == 1:
+            target_language_response = unique_lines[0]
+            english_translation = unique_lines[0]  # Use same text as fallback
+        else:
+            target_language_response = response_text.strip()
+            english_translation = response_text.strip()
         
         # Store the message and response
         with get_db_connection() as conn:
