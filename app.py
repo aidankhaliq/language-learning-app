@@ -1013,6 +1013,15 @@ def get_gemini_response(prompt):
 def ensure_user_columns():
     """Ensures all required columns exist in the users table and creates additional tables"""
     with get_db_connection() as conn:
+        # First, check if users table exists
+        table_exists = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='users';"
+        ).fetchone()
+        
+        if not table_exists:
+            print("Users table doesn't exist yet - skipping column additions")
+            return
+            
         # Get existing columns
         existing_columns = [row['name'] for row in conn.execute("PRAGMA table_info(users);")]
         
