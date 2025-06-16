@@ -79,6 +79,7 @@ def get_db_connection():
     """
     Creates and returns a connection to the SQLite database with proper configuration.
     Supports both local development and Render deployment with persistent storage.
+    Initializes database tables if they don't exist.
 
     Returns:
         sqlite3.Connection: A configured database connection
@@ -98,7 +99,122 @@ def get_db_connection():
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row  # This allows accessing columns by name
     conn.execute('PRAGMA busy_timeout = 30000')  # 30 second timeout to avoid locking issues
+    
+    # Initialize database tables if they don't exist
+    _initialize_database_tables(conn)
+    
     return conn
+
+def _initialize_database_tables(conn):
+    """Initialize database tables if they don't exist"""
+    try:
+        # Check if users table exists
+        table_exists = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='users';"
+        ).fetchone()
+        
+        if not table_exists:
+            print("Users table doesn't exist - creating database tables...")
+            
+            # Create users table
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT UNIQUE NOT NULL,
+                    email TEXT UNIQUE NOT NULL,
+                    password TEXT NOT NULL,
+                    security_answer TEXT NOT NULL,
+                    is_admin INTEGER DEFAULT 0,
+                    is_active INTEGER DEFAULT 1,
+                    reset_token TEXT,
+                    bio TEXT,
+                    urls TEXT,
+                    profile_picture TEXT,
+                    dark_mode INTEGER DEFAULT 0,
+                    name TEXT,
+                    phone TEXT,
+                    location TEXT,
+                    website TEXT,
+                    avatar TEXT,
+                    timezone TEXT,
+                    datetime_format TEXT
+                )
+            ''')
+            print("✅ Table 'users' created!")
+            
+            # Create other essential tables
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS notifications (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    message TEXT NOT NULL,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    is_read INTEGER DEFAULT 0,
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                )
+            ''')
+            
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS chat_sessions (
+                    session_id TEXT PRIMARY KEY,
+                    user_id INTEGER NOT NULL,
+                    language TEXT NOT NULL,
+                    started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    last_message_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users (id)
+                )
+            ''')
+            
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS chat_messages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id TEXT NOT NULL,
+                    message TEXT NOT NULL,
+                    bot_response TEXT NOT NULL,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (session_id) REFERENCES chat_sessions (session_id)
+                )
+            ''')
+            
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS quiz_questions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    language TEXT NOT NULL,
+                    difficulty TEXT NOT NULL,
+                    question TEXT NOT NULL,
+                    options TEXT NOT NULL,
+                    answer TEXT NOT NULL,
+                    question_type TEXT DEFAULT 'multiple_choice',
+                    points INTEGER DEFAULT 10,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS quiz_results_enhanced (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    language TEXT NOT NULL,
+                    difficulty TEXT NOT NULL,
+                    score INTEGER NOT NULL,
+                    total INTEGER NOT NULL,
+                    percentage REAL NOT NULL,
+                    passed INTEGER DEFAULT 0,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    question_details TEXT NOT NULL,
+                    points_earned INTEGER DEFAULT 0,
+                    streak_bonus INTEGER DEFAULT 0,
+                    time_bonus INTEGER DEFAULT 0,
+                    FOREIGN KEY (user_id) REFERENCES users (id)
+                )
+            ''')
+            
+            conn.commit()
+            print("✅ Essential database tables created!")
+            
+    except Exception as e:
+        print(f"Error initializing database tables: {e}")
+        # Don't raise the exception to avoid breaking the app
 
 def get_user_id(email):
     """
