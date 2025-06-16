@@ -42,7 +42,7 @@ except ImportError:
 # Initialize Flask application
 app = Flask(__name__)
 CORS(app)
-app.secret_key = os.getenv('FLASK_SECRET_KEY', 'supersecretkey')
+app.secret_key = os.getenv('FLASK_SECRET_KEY', 'FL4sk-L4ngu4g3-L34rn1ng-S3cr3t-K3y-2024-S3cur3-R4nd0m-K3y-P3rs1st3nc3')
 
 # --- File Upload Configuration ---
 UPLOAD_FOLDER = 'static/uploads/'
@@ -349,31 +349,35 @@ def _ensure_admin_user_and_sample_data(conn):
             
             print(f"✅ Admin user created: {admin_email} / {admin_password}")
         
-        # Check if sample questions exist
-        sample_count = conn.execute("SELECT COUNT(*) FROM quiz_questions").fetchone()[0]
-        if sample_count == 0:
-            print("📝 Adding sample quiz questions...")
-            
-            sample_questions = [
-                ("English", "Beginner", "What is the plural of 'cat'?", '["cats", "cat", "cates", "caties"]', "cats", "multiple_choice", 10),
-                ("English", "Beginner", "Choose the correct verb: 'I ___ happy.'", '["am", "is", "are", "be"]', "am", "multiple_choice", 10),
-                ("English", "Intermediate", "What does 'ubiquitous' mean?", '["rare", "everywhere", "beautiful", "ancient"]', "everywhere", "multiple_choice", 15),
-                ("Spanish", "Beginner", "How do you say 'hello' in Spanish?", '["hola", "adios", "gracias", "por favor"]', "hola", "multiple_choice", 10),
-                ("Spanish", "Beginner", "What is 'casa' in English?", '["car", "house", "cat", "dog"]', "house", "multiple_choice", 10),
-                ("French", "Beginner", "How do you say 'thank you' in French?", '["bonjour", "au revoir", "merci", "s\'il vous plait"]', "merci", "multiple_choice", 10),
-                ("Chinese", "Beginner", "How do you say 'hello' in Chinese?", '["你好", "再见", "谢谢", "请"]', "你好", "multiple_choice", 10),
-                ("Malay", "Beginner", "How do you say 'thank you' in Malay?", '["terima kasih", "selamat pagi", "selamat tinggal", "maaf"]', "terima kasih", "multiple_choice", 10),
-                ("Portuguese", "Beginner", "How do you say 'hello' in Portuguese?", '["olá", "tchau", "obrigado", "por favor"]', "olá", "multiple_choice", 10),
-                ("Tamil", "Beginner", "How do you say 'hello' in Tamil?", '["வணக்கம்", "போய் வருகிறேன்", "நன்றி", "தயவுசெய்து"]', "வணக்கம்", "multiple_choice", 10),
-            ]
-            
-            for question_data in sample_questions:
-                conn.execute('''
-                    INSERT INTO quiz_questions (language, difficulty, question, options, answer, question_type, points)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                ''', question_data)
-            
-            print(f"✅ Added {len(sample_questions)} sample questions")
+        # COMMENTED OUT: Auto-generation of sample questions removed per user request
+        # This prevents questions from reappearing after deletion from admin dashboard
+        # Users should use the import function in admin dashboard to add their own questions
+        # 
+        # # Check if sample questions exist
+        # sample_count = conn.execute("SELECT COUNT(*) FROM quiz_questions").fetchone()[0]
+        # if sample_count == 0:
+        #     print("📝 Adding sample quiz questions...")
+        #     
+        #     sample_questions = [
+        #         ("English", "Beginner", "What is the plural of 'cat'?", '["cats", "cat", "cates", "caties"]', "cats", "multiple_choice", 10),
+        #         ("English", "Beginner", "Choose the correct verb: 'I ___ happy.'", '["am", "is", "are", "be"]', "am", "multiple_choice", 10),
+        #         ("English", "Intermediate", "What does 'ubiquitous' mean?", '["rare", "everywhere", "beautiful", "ancient"]', "everywhere", "multiple_choice", 15),
+        #         ("Spanish", "Beginner", "How do you say 'hello' in Spanish?", '["hola", "adios", "gracias", "por favor"]', "hola", "multiple_choice", 10),
+        #         ("Spanish", "Beginner", "What is 'casa' in English?", '["car", "house", "cat", "dog"]', "house", "multiple_choice", 10),
+        #         ("French", "Beginner", "How do you say 'thank you' in French?", '["bonjour", "au revoir", "merci", "s\'il vous plait"]', "merci", "multiple_choice", 10),
+        #         ("Chinese", "Beginner", "How do you say 'hello' in Chinese?", '["你好", "再见", "谢谢", "请"]', "你好", "multiple_choice", 10),
+        #         ("Malay", "Beginner", "How do you say 'thank you' in Malay?", '["terima kasih", "selamat pagi", "selamat tinggal", "maaf"]', "terima kasih", "multiple_choice", 10),
+        #         ("Portuguese", "Beginner", "How do you say 'hello' in Portuguese?", '["olá", "tchau", "obrigado", "por favor"]', "olá", "multiple_choice", 10),
+        #         ("Tamil", "Beginner", "How do you say 'hello' in Tamil?", '["வணக்கம்", "போய் வருகிறேன்", "நன்றி", "தயவுசெய்து"]', "வணக்கம்", "multiple_choice", 10),
+        #     ]
+        #     
+        #     for question_data in sample_questions:
+        #         conn.execute('''
+        #             INSERT INTO quiz_questions (language, difficulty, question, options, answer, question_type, points)
+        #             VALUES (?, ?, ?, ?, ?, ?, ?)
+        #         ''', question_data)
+        #     
+        #     print(f"✅ Added {len(sample_questions)} sample questions")
         
         conn.commit()
         
