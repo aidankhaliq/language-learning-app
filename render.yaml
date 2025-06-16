@@ -3,8 +3,8 @@ services:
     name: language-learning-chatbot
     env: python
     buildCommand: |
-      pip install --upgrade pip
-      pip install -r requirements.txt --no-cache-dir
+      pip install --upgrade pip setuptools wheel
+      pip install --only-binary=numpy,pandas,torch -r requirements.txt --no-cache-dir
       python scripts/init_db.py
     startCommand: gunicorn app:app --workers 1 --threads 4 --timeout 600 --bind 0.0.0.0:$PORT --worker-class=gevent --worker-connections=1000
     envVars:
