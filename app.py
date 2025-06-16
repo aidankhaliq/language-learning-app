@@ -316,9 +316,69 @@ def _initialize_database_tables(conn):
             table_names = [table[0] for table in tables]
             print(f"✅ Database tables: {', '.join(table_names)}")
             
+        # Always ensure admin user and sample data exist (regardless of table creation)
+        _ensure_admin_user_and_sample_data(conn)
+            
     except Exception as e:
         print(f"Error initializing database tables: {e}")
         # Don't raise the exception to avoid breaking the app
+
+def _ensure_admin_user_and_sample_data(conn):
+    """Ensure admin user and sample quiz questions exist"""
+    try:
+        # Check if admin user exists
+        admin_exists = conn.execute("SELECT id FROM users WHERE is_admin = 1").fetchone()
+        
+        if not admin_exists:
+            print("🔑 Creating admin user...")
+            from werkzeug.security import generate_password_hash
+            
+            # Create admin user with default credentials
+            admin_username = "admin"
+            admin_email = "admin@example.com"
+            admin_password = "admin123"
+            admin_security_answer = "admin"
+            
+            # Hash the password
+            hashed_password = generate_password_hash(admin_password)
+            
+            conn.execute('''
+                INSERT INTO users (username, email, password, security_answer, is_admin)
+                VALUES (?, ?, ?, ?, 1)
+            ''', (admin_username, admin_email, hashed_password, admin_security_answer))
+            
+            print(f"✅ Admin user created: {admin_email} / {admin_password}")
+        
+        # Check if sample questions exist
+        sample_count = conn.execute("SELECT COUNT(*) FROM quiz_questions").fetchone()[0]
+        if sample_count == 0:
+            print("📝 Adding sample quiz questions...")
+            
+            sample_questions = [
+                ("English", "Beginner", "What is the plural of 'cat'?", '["cats", "cat", "cates", "caties"]', "cats", "multiple_choice", 10),
+                ("English", "Beginner", "Choose the correct verb: 'I ___ happy.'", '["am", "is", "are", "be"]', "am", "multiple_choice", 10),
+                ("English", "Intermediate", "What does 'ubiquitous' mean?", '["rare", "everywhere", "beautiful", "ancient"]', "everywhere", "multiple_choice", 15),
+                ("Spanish", "Beginner", "How do you say 'hello' in Spanish?", '["hola", "adios", "gracias", "por favor"]', "hola", "multiple_choice", 10),
+                ("Spanish", "Beginner", "What is 'casa' in English?", '["car", "house", "cat", "dog"]', "house", "multiple_choice", 10),
+                ("French", "Beginner", "How do you say 'thank you' in French?", '["bonjour", "au revoir", "merci", "s\'il vous plait"]', "merci", "multiple_choice", 10),
+                ("Chinese", "Beginner", "How do you say 'hello' in Chinese?", '["你好", "再见", "谢谢", "请"]', "你好", "multiple_choice", 10),
+                ("Malay", "Beginner", "How do you say 'thank you' in Malay?", '["terima kasih", "selamat pagi", "selamat tinggal", "maaf"]', "terima kasih", "multiple_choice", 10),
+                ("Portuguese", "Beginner", "How do you say 'hello' in Portuguese?", '["olá", "tchau", "obrigado", "por favor"]', "olá", "multiple_choice", 10),
+                ("Tamil", "Beginner", "How do you say 'hello' in Tamil?", '["வணக்கம்", "போய் வருகிறேன்", "நன்றி", "தயவுசெய்து"]', "வணக்கம்", "multiple_choice", 10),
+            ]
+            
+            for question_data in sample_questions:
+                conn.execute('''
+                    INSERT INTO quiz_questions (language, difficulty, question, options, answer, question_type, points)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''', question_data)
+            
+            print(f"✅ Added {len(sample_questions)} sample questions")
+        
+        conn.commit()
+        
+    except Exception as e:
+        print(f"Error ensuring admin user and sample data: {e}")
 
 def get_user_id(email):
     """
@@ -3188,8 +3248,22 @@ def get_flashcards(language):
     }
     db_language = language_map.get(language.lower(), language)
     flashcards = []
+    
+    print(f"🔍 Flashcards request for language: {language} -> {db_language}")
+    
     try:
         with get_db_connection() as conn:
+            # Check total questions available
+            total_questions = conn.execute("SELECT COUNT(*) FROM quiz_questions WHERE language = ?", (db_language,)).fetchone()[0]
+            print(f"📊 Total questions for {db_language}: {total_questions}")
+            
+            if total_questions == 0:
+                print(f"⚠️ No questions found for language: {db_language}")
+                available_languages = conn.execute("SELECT DISTINCT language FROM quiz_questions").fetchall()
+                available_langs = [lang[0] for lang in available_languages]
+                print(f"Available languages: {available_langs}")
+                return jsonify({'message': f'No flashcards available for {db_language}. Available languages: {", ".join(available_langs)}'})
+            
             # Strictly select 50 random questions for the selected language only
             questions = conn.execute("""
                 SELECT question, options, answer, question_type, points 
@@ -3198,6 +3272,8 @@ def get_flashcards(language):
                 ORDER BY RANDOM() 
                 LIMIT 50
             """, (db_language,)).fetchall()
+            
+            print(f"🎯 Retrieved {len(questions)} questions from database")
             
             for q in questions:
                 question_text = q['question']
@@ -3256,13 +3332,18 @@ def get_flashcards(language):
                     })
                     
     except Exception as e:
-        print(f'Error reading flashcards for {language} from database: {e}')
+        print(f'❌ Error reading flashcards for {language} from database: {e}')
+        print(f'Exception type: {type(e).__name__}')
+        import traceback
+        print(f'Full traceback: {traceback.format_exc()}')
         return jsonify({'error': 'Error loading flashcards. Please contact administrator.'}), 500
     
     # If no flashcards found, return helpful message
     if not flashcards:
+        print(f"⚠️ No flashcards created for {language}, even though questions exist")
         return jsonify({'message': f'No flashcards available for {language}. Admin can add questions via the admin dashboard.'})
     
+    print(f"✅ Successfully created {len(flashcards)} flashcards for {language}")
     return jsonify(flashcards)
 
 # --- Account Management Endpoints ---
@@ -3434,11 +3515,57 @@ def contact():
 def health_check():
     """Health check endpoint for deployment monitoring"""
     try:
-        # Simple health check that always returns success
-        # Database will be initialized when first user accesses the app
-        return {"status": "healthy", "message": "Application is running"}, 200
+        with get_db_connection() as conn:
+            # Test database connectivity
+            user_count = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+            question_count = conn.execute("SELECT COUNT(*) FROM quiz_questions").fetchone()[0]
+            admin_count = conn.execute("SELECT COUNT(*) FROM users WHERE is_admin = 1").fetchone()[0]
+            
+            return jsonify({
+                'status': 'healthy',
+                'timestamp': datetime.now().isoformat(),
+                'database': 'connected',
+                'users': user_count,
+                'quiz_questions': question_count,
+                'admins': admin_count
+            })
     except Exception as e:
-        return {"status": "unhealthy", "error": str(e)}, 500
+        return jsonify({
+            'status': 'unhealthy',
+            'timestamp': datetime.now().isoformat(),
+            'database': 'error',
+            'error': str(e)
+        }), 500
+
+@app.route('/debug/database')
+def debug_database():
+    """Debug endpoint to check database status"""
+    try:
+        with get_db_connection() as conn:
+            # Get all tables
+            tables = conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+            table_names = [table[0] for table in tables]
+            
+            # Get admin users
+            admins = conn.execute("SELECT id, username, email, is_admin FROM users WHERE is_admin = 1").fetchall()
+            admin_list = [{'id': a['id'], 'username': a['username'], 'email': a['email']} for a in admins]
+            
+            # Get question counts by language
+            language_counts = conn.execute("""
+                SELECT language, COUNT(*) as count 
+                FROM quiz_questions 
+                GROUP BY language
+            """).fetchall()
+            
+            return jsonify({
+                'tables': table_names,
+                'admins': admin_list,
+                'question_counts': [{'language': lc[0], 'count': lc[1]} for lc in language_counts],
+                'total_questions': conn.execute("SELECT COUNT(*) FROM quiz_questions").fetchone()[0],
+                'total_users': conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+            })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # Initialize database on startup
 try:
