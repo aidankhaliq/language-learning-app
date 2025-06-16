@@ -3257,7 +3257,11 @@ def get_flashcards(language):
                     
     except Exception as e:
         print(f'Error reading flashcards for {language} from database: {e}')
-        return jsonify({'error': 'Error loading flashcards'}), 500
+        return jsonify({'error': 'Error loading flashcards. Please contact administrator.'}), 500
+    
+    # If no flashcards found, return helpful message
+    if not flashcards:
+        return jsonify({'message': f'No flashcards available for {language}. Admin can add questions via the admin dashboard.'})
     
     return jsonify(flashcards)
 
