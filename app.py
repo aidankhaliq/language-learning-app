@@ -99,6 +99,7 @@ def get_db_connection():
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row  # This allows accessing columns by name
     conn.execute('PRAGMA busy_timeout = 30000')  # 30 second timeout to avoid locking issues
+    conn.execute('PRAGMA journal_mode = WAL')    # Better for concurrent access
     
     # Initialize database tables if they don't exist
     _initialize_database_tables(conn)
@@ -465,91 +466,98 @@ def update_user_progress(user_id):
     Args:
         user_id (int): The ID of the user to update progress for
     """
+    conn = None
     try:
-        with get_db_connection() as conn:
-            # Calculate current stats
-            words_learned = conn.execute(
-                'SELECT COUNT(*) as count FROM study_list WHERE user_id = ?',
-                (user_id,)
-            ).fetchone()['count']
+        conn = get_db_connection()
+        # Set a timeout for the database connection to avoid hanging
+        conn.execute('PRAGMA busy_timeout = 5000')  # 5 second timeout
+        
+        # Calculate current stats
+        words_learned = conn.execute(
+            'SELECT COUNT(*) as count FROM study_list WHERE user_id = ?',
+            (user_id,)
+        ).fetchone()['count']
 
-            conversation_count = conn.execute(
-                'SELECT COUNT(DISTINCT session_id) as count FROM chat_sessions WHERE user_id = ?',
-                (user_id,)
-            ).fetchone()['count']
+        conversation_count = conn.execute(
+            'SELECT COUNT(DISTINCT session_id) as count FROM chat_sessions WHERE user_id = ?',
+            (user_id,)
+        ).fetchone()['count']
 
-            # Calculate accuracy rate from both quiz tables
-            total_score = 0
-            total_questions = 0
+        # Calculate accuracy rate from both quiz tables
+        total_score = 0
+        total_questions = 0
+        
+        try:
+            quiz_stats_enhanced = conn.execute('''
+                SELECT 
+                    SUM(score) as total_score,
+                    SUM(total) as total_questions
+                FROM quiz_results_enhanced 
+                WHERE user_id = ?
+            ''', (user_id,)).fetchone()
+            total_score += quiz_stats_enhanced['total_score'] or 0
+            total_questions += quiz_stats_enhanced['total_questions'] or 0
+        except Exception as e:
+            print(f"Error querying quiz_results_enhanced in update_user_progress: {e}")
+
+        try:
+            quiz_stats_legacy = conn.execute('''
+                SELECT 
+                    SUM(score) as total_score,
+                    SUM(total) as total_questions
+                FROM quiz_results 
+                WHERE user_id = ?
+            ''', (user_id,)).fetchone()
+            total_score += quiz_stats_legacy['total_score'] or 0
+            total_questions += quiz_stats_legacy['total_questions'] or 0
+        except Exception as e:
+            print(f"Error querying quiz_results (legacy) in update_user_progress: {e}")
+
+        accuracy_rate = 0
+        if total_questions and total_questions > 0:
+            accuracy_rate = (total_score / total_questions) * 100
+
+        # Update or insert progress record
+        today = datetime.now().date()
+        existing_progress = conn.execute(
+            'SELECT daily_streak, last_activity_date FROM user_progress WHERE user_id = ?',
+            (user_id,)
+        ).fetchone()
+
+        # Calculate streak
+        if existing_progress:
+            last_activity = None
+            if existing_progress['last_activity_date']:
+                try:
+                    last_activity = datetime.strptime(existing_progress['last_activity_date'], '%Y-%m-%d').date()
+                except (ValueError, TypeError):
+                    last_activity = None
             
-            try:
-                quiz_stats_enhanced = conn.execute('''
-                    SELECT 
-                        SUM(score) as total_score,
-                        SUM(total) as total_questions
-                    FROM quiz_results_enhanced 
-                    WHERE user_id = ?
-                ''', (user_id,)).fetchone()
-                total_score += quiz_stats_enhanced['total_score'] or 0
-                total_questions += quiz_stats_enhanced['total_questions'] or 0
-            except Exception as e:
-                print(f"Error querying quiz_results_enhanced in update_user_progress: {e}")
-
-            try:
-                quiz_stats_legacy = conn.execute('''
-                    SELECT 
-                        SUM(score) as total_score,
-                        SUM(total) as total_questions
-                    FROM quiz_results 
-                    WHERE user_id = ?
-                ''', (user_id,)).fetchone()
-                total_score += quiz_stats_legacy['total_score'] or 0
-                total_questions += quiz_stats_legacy['total_questions'] or 0
-            except Exception as e:
-                print(f"Error querying quiz_results (legacy) in update_user_progress: {e}")
-
-            accuracy_rate = 0
-            if total_questions and total_questions > 0:
-                accuracy_rate = (total_score / total_questions) * 100
-
-            # Update or insert progress record
-            today = datetime.now().date()
-            existing_progress = conn.execute(
-                'SELECT daily_streak, last_activity_date FROM user_progress WHERE user_id = ?',
-                (user_id,)
-            ).fetchone()
-
-            # Calculate streak
-            if existing_progress:
-                last_activity = None
-                if existing_progress['last_activity_date']:
-                    try:
-                        last_activity = datetime.strptime(existing_progress['last_activity_date'], '%Y-%m-%d').date()
-                    except (ValueError, TypeError):
-                        last_activity = None
-                
-                if last_activity:
-                    days_diff = (today - last_activity).days
-                    if days_diff == 1:  # Consecutive day
-                        new_streak = (existing_progress['daily_streak'] or 0) + 1
-                    elif days_diff == 0:  # Same day
-                        new_streak = existing_progress['daily_streak'] or 1
-                    else:  # Streak broken
-                        new_streak = 1
-                else:
+            if last_activity:
+                days_diff = (today - last_activity).days
+                if days_diff == 1:  # Consecutive day
+                    new_streak = (existing_progress['daily_streak'] or 0) + 1
+                elif days_diff == 0:  # Same day
+                    new_streak = existing_progress['daily_streak'] or 1
+                else:  # Streak broken
                     new_streak = 1
             else:
                 new_streak = 1
+        else:
+            new_streak = 1
 
-            conn.execute('''
-                INSERT OR REPLACE INTO user_progress 
-                (user_id, words_learned, conversation_count, accuracy_rate, daily_streak, last_activity_date, last_updated)
-                VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-            ''', (user_id, words_learned, conversation_count, accuracy_rate, new_streak, today))
-            conn.commit()
-            
+        conn.execute('''
+            INSERT OR REPLACE INTO user_progress 
+            (user_id, words_learned, conversation_count, accuracy_rate, daily_streak, last_activity_date, last_updated)
+            VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ''', (user_id, words_learned, conversation_count, accuracy_rate, new_streak, today))
+        conn.commit()
+        
     except Exception as e:
         print(f"Error updating user progress: {e}")
+    finally:
+        if conn:
+            conn.close()
 
 # --- Admin Decorator ---
 def admin_required(f):
@@ -1470,9 +1478,7 @@ def chat():
                     INSERT INTO chat_sessions (session_id, user_id, language)
                     VALUES (?, ?, ?)
                 ''', (session_id, session['user_id'], language))
-                
-                # Update user progress metrics for new conversation
-                update_user_progress(session['user_id'])
+                conn.commit()  # Commit immediately to release the lock
                 
         # If image is present, use Gemini Vision
         if image_file and allowed_file(image_file.filename):
@@ -1573,7 +1579,11 @@ Response:
         else:
             # Text-only response
             prompt_text = f"You are a helpful and encouraging language tutor teaching {language}. The student's message is: '{message}'\nPlease provide a very concise response that directly addresses the student's message. Avoid unnecessary details or conversational filler unless specifically asked.\nProvide your response in the following format:\n[Response in {language}]\n[English translation]\nResponse:"
-            response_text = get_gemini_response(prompt_text)
+            try:
+                response_text = get_gemini_response(prompt_text)
+            except Exception as e:
+                print(f"Error getting Gemini response: {e}")
+                response_text = f"[Sorry, I'm having trouble processing your message right now. Please try again.]\n[Sorry, I'm having trouble processing your message right now. Please try again.]"
         
         # Split the response into the target language response and English translation
         response_parts = response_text.split('\n', 1)
@@ -1587,6 +1597,8 @@ Response:
                 VALUES (?, ?, ?)
             ''', (session_id, message, response_text))
             conn.commit()
+        
+        # Note: Progress metrics will be updated by the progress stats endpoint when user views dashboard/chatbot
         
         return jsonify({
             'response': target_language_response,
