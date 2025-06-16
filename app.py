@@ -84,14 +84,36 @@ def get_db_connection():
     Returns:
         sqlite3.Connection: A configured database connection
     """
-    # Check if we're running on Render (persistent disk mounted at /data)
-    if os.path.exists('/data'):
+    # FORCE PERSISTENT STORAGE ON RENDER - Check for Render environment variables
+    is_render = os.getenv('RENDER') is not None or os.getenv('RENDER_SERVICE_ID') is not None
+    
+    if is_render or os.path.exists('/data'):
         db_path = '/data/database.db'
-        print(f"Using Render persistent storage: {db_path}")
+        print(f"🔴 RENDER/PRODUCTION MODE: Using persistent storage: {db_path}")
+        
+        # Ensure /data directory exists and is writable
+        try:
+            os.makedirs('/data', exist_ok=True)
+            # Test write permissions
+            test_file = '/data/test_write.tmp'
+            with open(test_file, 'w') as f:
+                f.write('test')
+            os.remove(test_file)
+            print(f"✅ /data directory is writable")
+        except Exception as e:
+            print(f"❌ ERROR: /data directory is not writable: {e}")
+            # Fallback but log the issue
+            db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'database.db')
+            print(f"⚠️ FALLBACK: Using local database: {db_path}")
     else:
         # Local development - use database in current directory
         db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'database.db')
-        print(f"Using local database: {db_path}")
+        print(f"🔵 LOCAL MODE: Using local database: {db_path}")
+    
+    # Detailed logging about database status
+    db_exists_before = os.path.exists(db_path)
+    db_size_before = os.path.getsize(db_path) if db_exists_before else 0
+    print(f"📊 Database status: exists={db_exists_before}, size={db_size_before} bytes")
     
     # Ensure the directory exists
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
@@ -101,6 +123,9 @@ def get_db_connection():
     conn.execute('PRAGMA busy_timeout = 30000')  # 30 second timeout to avoid locking issues
     conn.execute('PRAGMA journal_mode = WAL')    # Better for concurrent access
     
+    # FORCE SYNC TO DISK
+    conn.execute('PRAGMA synchronous = FULL')    # Ensure data is written to disk
+    
     # Initialize database tables if they don't exist
     _initialize_database_tables(conn)
     
@@ -109,6 +134,13 @@ def get_db_connection():
         ensure_user_columns_on_connection(conn)
     except Exception as e:
         print(f"Error in ensure_user_columns_on_connection: {e}")
+    
+    # FORCE COMMIT AND SYNC
+    conn.commit()
+    
+    # Check database status after initialization
+    db_size_after = os.path.getsize(db_path)
+    print(f"📊 Database after init: size={db_size_after} bytes")
     
     return conn
 
@@ -440,19 +472,42 @@ def register_user(username, email, password, security_answer):
     Returns:
         bool: True if registration succeeded, False otherwise
     """
+    print(f"🔍 REGISTERING USER: {username}, {email}")
+    
     with get_db_connection() as conn:
         # Check if email already exists
-        if conn.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone():
+        existing_user = conn.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
+        if existing_user:
+            print(f"❌ User already exists with email: {email}")
             return False
 
         try:
-            conn.execute(
+            print(f"📝 Inserting new user: {username}")
+            result = conn.execute(
                 "INSERT INTO users (username, email, password, security_answer) VALUES (?, ?, ?, ?)",
                 (username, email, generate_password_hash(password), security_answer))
+            
+            # FORCE COMMIT
             conn.commit()
-            return True
-        except sqlite3.IntegrityError:
-            # This handles cases like username uniqueness constraint violations
+            
+            # Verify the user was actually inserted
+            new_user = conn.execute("SELECT id, username FROM users WHERE email = ?", (email,)).fetchone()
+            if new_user:
+                print(f"✅ USER SUCCESSFULLY REGISTERED: ID={new_user['id']}, Username={new_user['username']}")
+                
+                # Double-check by counting total users
+                total_users = conn.execute("SELECT COUNT(*) as count FROM users").fetchone()['count']
+                print(f"📊 Total users in database: {total_users}")
+                return True
+            else:
+                print(f"❌ FAILED: User not found after registration")
+                return False
+                
+        except sqlite3.IntegrityError as e:
+            print(f"❌ INTEGRITY ERROR during registration: {e}")
+            return False
+        except Exception as e:
+            print(f"❌ UNEXPECTED ERROR during registration: {e}")
             return False
 
 # --- Helper Functions ---
@@ -2440,7 +2495,12 @@ def admin_import_questions():
     try:
         df = pd.read_excel(file)
         inserted = 0
+        print(f"🔍 IMPORTING QUESTIONS: Language={language}, Difficulty={difficulty}, Type={question_type}")
+        
         with get_db_connection() as conn:
+            # Check questions before import
+            questions_before = conn.execute("SELECT COUNT(*) as count FROM quiz_questions").fetchone()['count']
+            print(f"📊 Questions in database before import: {questions_before}")
             # Get column names from the DataFrame and convert to lowercase for case-insensitive matching
             original_columns = df.columns.tolist()
             df.columns = df.columns.str.lower()
@@ -2788,7 +2848,18 @@ def admin_import_questions():
                             flash(f'Error processing row {index+2} for Complex rephrasing: {str(e)}', 'danger')
                             # Optionally log the full traceback server-side
                             continue # Skip row with processing error
+            # Check questions count before final commit
+            questions_after_insert = conn.execute("SELECT COUNT(*) as count FROM quiz_questions").fetchone()['count']
+            print(f"📊 Questions after inserts (before commit): {questions_after_insert}")
+            
+            # FORCE COMMIT AND SYNC
             conn.commit()
+            
+            # Double-check questions count after commit
+            questions_final = conn.execute("SELECT COUNT(*) as count FROM quiz_questions").fetchone()['count']
+            print(f"📊 Questions after final commit: {questions_final}")
+            
+        print(f"✅ IMPORT COMPLETED: {inserted} questions successfully processed")
         flash(f'{inserted} questions imported successfully!', 'success')
     except Exception as e:
         flash(f'Error importing questions: {str(e)}', 'danger')
@@ -3576,6 +3647,80 @@ def debug_database():
             })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/debug/database/detailed')
+def debug_database_detailed():
+    """Detailed debug endpoint with file system and database path info"""
+    try:
+        # Environment and file system info
+        env_info = {
+            'RENDER': os.getenv('RENDER'),
+            'RENDER_SERVICE_ID': os.getenv('RENDER_SERVICE_ID'),
+            'cwd': os.getcwd(),
+            '/data_exists': os.path.exists('/data'),
+            '/data_writable': None,
+            'database_path': None,
+            'database_exists': None,
+            'database_size': None
+        }
+        
+        # Test /data writability
+        try:
+            test_file = '/data/test_debug.tmp'
+            with open(test_file, 'w') as f:
+                f.write('test')
+            os.remove(test_file)
+            env_info['/data_writable'] = True
+        except Exception as e:
+            env_info['/data_writable'] = f"Error: {e}"
+        
+        # Get database path info (without connecting)
+        is_render = os.getenv('RENDER') is not None or os.getenv('RENDER_SERVICE_ID') is not None
+        
+        if is_render or os.path.exists('/data'):
+            db_path = '/data/database.db'
+        else:
+            db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'database.db')
+        
+        env_info['database_path'] = db_path
+        env_info['database_exists'] = os.path.exists(db_path)
+        env_info['database_size'] = os.path.getsize(db_path) if os.path.exists(db_path) else 0
+        
+        # Now connect and get database info
+        with get_db_connection() as conn:
+            # Get table info
+            tables = conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+            table_names = [table[0] for table in tables]
+            
+            # Get user count and recent users
+            user_count = conn.execute("SELECT COUNT(*) as count FROM users").fetchone()['count']
+            recent_users = conn.execute("SELECT id, username, email FROM users ORDER BY id DESC LIMIT 5").fetchall()
+            recent_user_list = [{'id': u['id'], 'username': u['username'], 'email': u['email']} for u in recent_users]
+            
+            # Get question counts by language
+            question_counts = conn.execute("""
+                SELECT language, COUNT(*) as count 
+                FROM quiz_questions 
+                GROUP BY language 
+                ORDER BY language
+            """).fetchall()
+            question_data = [{'language': q[0], 'count': q[1]} for q in question_counts]
+            
+            # Total questions
+            total_questions = conn.execute("SELECT COUNT(*) as count FROM quiz_questions").fetchone()['count']
+            
+            return jsonify({
+                'environment': env_info,
+                'database': {
+                    'tables': table_names,
+                    'total_users': user_count,
+                    'recent_users': recent_user_list,
+                    'question_counts': question_data,
+                    'total_questions': total_questions
+                }
+            })
+    except Exception as e:
+        return jsonify({'error': str(e), 'environment': env_info if 'env_info' in locals() else 'Failed to get env info'}), 500
 
 # Initialize database on startup
 try:
