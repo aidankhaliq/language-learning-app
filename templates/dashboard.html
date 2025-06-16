@@ -543,12 +543,12 @@
         fetch('/get_progress_stats')
             .then(res => res.json())
             .then(stats => {
-                document.getElementById('words-learned').textContent = stats.words_learned;
-                document.getElementById('conversation-count').textContent = stats.conversation_count;
-                document.getElementById('accuracy-rate').textContent = stats.accuracy_rate + '%';
-                document.getElementById('progress-fill').style.width = stats.progress_percentage + '%';
-                document.getElementById('progress-label').textContent = stats.progress_percentage.toFixed(1) + '% of target';
-                document.getElementById('daily-streak').textContent = stats.daily_streak;
+                document.getElementById('words-learned').textContent = stats.words_learned || 0;
+                document.getElementById('conversation-count').textContent = stats.conversation_count || 0;
+                document.getElementById('accuracy-rate').textContent = (stats.accuracy_rate || 0) + '%';
+                document.getElementById('progress-fill').style.width = (stats.progress_percentage || 0) + '%';
+                document.getElementById('progress-label').textContent = (stats.progress_percentage || 0).toFixed(1) + '% of target';
+                document.getElementById('daily-streak').textContent = stats.daily_streak || 0;
                 // Achievements
                 const achievementsGrid = document.getElementById('achievements-grid');
                 achievementsGrid.innerHTML = '';
@@ -567,6 +567,14 @@
             })
             .catch(error => {
                 console.error('Error fetching dashboard stats:', error);
+                // Set default values on error
+                document.getElementById('words-learned').textContent = 0;
+                document.getElementById('conversation-count').textContent = 0;
+                document.getElementById('accuracy-rate').textContent = '0%';
+                document.getElementById('progress-fill').style.width = '0%';
+                document.getElementById('progress-label').textContent = '0% of target';
+                document.getElementById('daily-streak').textContent = 0;
+                document.getElementById('achievements-grid').innerHTML = '<div style="color:#888; text-align:center; width: 100%;">Error loading achievements</div>';
             });
     }
     // Patch window.onload to also update stats

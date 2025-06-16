@@ -1323,14 +1323,20 @@
             fetch('/get_progress_stats')
                 .then(res => res.json())
                 .then(stats => {
-                    document.getElementById('words-learned').textContent = stats.words_learned;
-                    document.getElementById('conversation-count').textContent = stats.conversation_count;
-                    document.getElementById('accuracy-rate').textContent = stats.accuracy_rate + '%';
-                    document.getElementById('progress-fill').style.width = stats.progress_percentage + '%';
-                    document.getElementById('daily-streak').textContent = stats.daily_streak;
+                    document.getElementById('words-learned').textContent = stats.words_learned || 0;
+                    document.getElementById('conversation-count').textContent = stats.conversation_count || 0;
+                    document.getElementById('accuracy-rate').textContent = (stats.accuracy_rate || 0) + '%';
+                    document.getElementById('progress-fill').style.width = (stats.progress_percentage || 0) + '%';
+                    document.getElementById('daily-streak').textContent = stats.daily_streak || 0;
                 })
                 .catch(error => {
                     console.error('Error fetching progress stats:', error);
+                    // Set default values on error
+                    document.getElementById('words-learned').textContent = 0;
+                    document.getElementById('conversation-count').textContent = 0;
+                    document.getElementById('accuracy-rate').textContent = '0%';
+                    document.getElementById('progress-fill').style.width = '0%';
+                    document.getElementById('daily-streak').textContent = 0;
                 });
         }
 

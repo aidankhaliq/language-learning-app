@@ -251,6 +251,20 @@ def _initialize_database_tables(conn):
                 )
             ''')
             
+            # Create legacy quiz results table (for backward compatibility)
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS quiz_results (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    language TEXT NOT NULL,
+                    difficulty TEXT NOT NULL,
+                    score INTEGER NOT NULL,
+                    total INTEGER NOT NULL,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users (id)
+                )
+            ''')
+            
             # Create study list table for word tracking
             conn.execute('''
                 CREATE TABLE IF NOT EXISTS study_list (
@@ -295,6 +309,11 @@ def _initialize_database_tables(conn):
             
             conn.commit()
             print("✅ Essential database tables created!")
+            
+            # Log which tables exist for debugging
+            tables = conn.execute("SELECT name FROM sqlite_master WHERE type='table';").fetchall()
+            table_names = [table[0] for table in tables]
+            print(f"✅ Database tables: {', '.join(table_names)}")
             
     except Exception as e:
         print(f"Error initializing database tables: {e}")
@@ -438,6 +457,99 @@ def add_notification(user_id, notification_message):
             (user_id, notification_message, datetime.now())
         )
         conn.commit()
+
+def update_user_progress(user_id):
+    """
+    Updates user progress metrics immediately after an activity.
+    
+    Args:
+        user_id (int): The ID of the user to update progress for
+    """
+    try:
+        with get_db_connection() as conn:
+            # Calculate current stats
+            words_learned = conn.execute(
+                'SELECT COUNT(*) as count FROM study_list WHERE user_id = ?',
+                (user_id,)
+            ).fetchone()['count']
+
+            conversation_count = conn.execute(
+                'SELECT COUNT(DISTINCT session_id) as count FROM chat_sessions WHERE user_id = ?',
+                (user_id,)
+            ).fetchone()['count']
+
+            # Calculate accuracy rate from both quiz tables
+            total_score = 0
+            total_questions = 0
+            
+            try:
+                quiz_stats_enhanced = conn.execute('''
+                    SELECT 
+                        SUM(score) as total_score,
+                        SUM(total) as total_questions
+                    FROM quiz_results_enhanced 
+                    WHERE user_id = ?
+                ''', (user_id,)).fetchone()
+                total_score += quiz_stats_enhanced['total_score'] or 0
+                total_questions += quiz_stats_enhanced['total_questions'] or 0
+            except Exception as e:
+                print(f"Error querying quiz_results_enhanced in update_user_progress: {e}")
+
+            try:
+                quiz_stats_legacy = conn.execute('''
+                    SELECT 
+                        SUM(score) as total_score,
+                        SUM(total) as total_questions
+                    FROM quiz_results 
+                    WHERE user_id = ?
+                ''', (user_id,)).fetchone()
+                total_score += quiz_stats_legacy['total_score'] or 0
+                total_questions += quiz_stats_legacy['total_questions'] or 0
+            except Exception as e:
+                print(f"Error querying quiz_results (legacy) in update_user_progress: {e}")
+
+            accuracy_rate = 0
+            if total_questions and total_questions > 0:
+                accuracy_rate = (total_score / total_questions) * 100
+
+            # Update or insert progress record
+            today = datetime.now().date()
+            existing_progress = conn.execute(
+                'SELECT daily_streak, last_activity_date FROM user_progress WHERE user_id = ?',
+                (user_id,)
+            ).fetchone()
+
+            # Calculate streak
+            if existing_progress:
+                last_activity = None
+                if existing_progress['last_activity_date']:
+                    try:
+                        last_activity = datetime.strptime(existing_progress['last_activity_date'], '%Y-%m-%d').date()
+                    except (ValueError, TypeError):
+                        last_activity = None
+                
+                if last_activity:
+                    days_diff = (today - last_activity).days
+                    if days_diff == 1:  # Consecutive day
+                        new_streak = (existing_progress['daily_streak'] or 0) + 1
+                    elif days_diff == 0:  # Same day
+                        new_streak = existing_progress['daily_streak'] or 1
+                    else:  # Streak broken
+                        new_streak = 1
+                else:
+                    new_streak = 1
+            else:
+                new_streak = 1
+
+            conn.execute('''
+                INSERT OR REPLACE INTO user_progress 
+                (user_id, words_learned, conversation_count, accuracy_rate, daily_streak, last_activity_date, last_updated)
+                VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ''', (user_id, words_learned, conversation_count, accuracy_rate, new_streak, today))
+            conn.commit()
+            
+    except Exception as e:
+        print(f"Error updating user progress: {e}")
 
 # --- Admin Decorator ---
 def admin_required(f):
@@ -1359,6 +1471,9 @@ def chat():
                     VALUES (?, ?, ?)
                 ''', (session_id, session['user_id'], language))
                 
+                # Update user progress metrics for new conversation
+                update_user_progress(session['user_id'])
+                
         # If image is present, use Gemini Vision
         if image_file and allowed_file(image_file.filename):
             print(f"Processing image file: {image_file.filename}")
@@ -1826,6 +1941,9 @@ def quiz_questions():
         percentage_score = int((correct/total)*100)
         quiz_notification = f"You scored {correct}/{total} ({percentage_score}%) in {language} {difficulty} quiz"
         add_notification(user_id, quiz_notification)
+        
+        # Update user progress metrics
+        update_user_progress(user_id)
         
         # Create achievement notifications for special scores
         if correct == total:  # Perfect score
@@ -2741,6 +2859,11 @@ def add_to_study_list():
                     print(f"Error adding word '{word}' to study list: {e}")
             conn.commit()
         print(f"Total words added: {added}")
+        
+        # Update user progress metrics if words were added
+        if added > 0:
+            update_user_progress(session['user_id'])
+            
         return jsonify({'status': 'success', 'added': added})
     
     # Fallback to single word
@@ -2760,6 +2883,11 @@ def add_to_study_list():
             result = conn.execute('INSERT OR IGNORE INTO study_list (user_id, word, language, added_at, note) VALUES (?, ?, ?, CURRENT_TIMESTAMP, NULL)', (session['user_id'], word, language))
             conn.commit()
             print(f"Single word add result - Word: {word}, Changes: {conn.total_changes}")
+            
+            # Update user progress metrics if word was added
+            if conn.total_changes > 0:
+                update_user_progress(session['user_id'])
+                
         return jsonify({'status': 'success'})
     except Exception as e:
         print(f"Error in add_to_study_list: {e}")
@@ -2791,6 +2919,10 @@ def remove_from_study_list():
         with get_db_connection() as conn:
             conn.execute('DELETE FROM study_list WHERE user_id = ? AND word = ?', (session['user_id'], word))
             conn.commit()
+            
+            # Update user progress metrics after word removal
+            update_user_progress(session['user_id'])
+            
         return jsonify({'status': 'success'})
     except Exception as e:
         print(f"Error in remove_from_study_list: {e}")
@@ -2823,14 +2955,19 @@ def get_progress_stats():
 
             # Update daily streak
             today = datetime.now().date()
-            last_activity = datetime.strptime(progress['last_activity_date'], '%Y-%m-%d').date() if progress['last_activity_date'] else None
+            last_activity = None
+            if progress['last_activity_date']:
+                try:
+                    last_activity = datetime.strptime(progress['last_activity_date'], '%Y-%m-%d').date()
+                except (ValueError, TypeError):
+                    last_activity = None
             
             if last_activity:
                 days_diff = (today - last_activity).days
                 if days_diff == 1:  # Consecutive day
-                    new_streak = progress['daily_streak'] + 1
+                    new_streak = (progress['daily_streak'] or 0) + 1
                 elif days_diff == 0:  # Same day
-                    new_streak = progress['daily_streak']
+                    new_streak = progress['daily_streak'] or 1
                 else:  # Streak broken
                     new_streak = 1
             else:
@@ -2849,18 +2986,39 @@ def get_progress_stats():
             ).fetchone()['count']
             print(f"Progress Stats - User {session['user_id']}: Conversations = {conversation_count}")
 
-            # Calculate accuracy rate from quiz results
-            quiz_stats = conn.execute('''
-                SELECT 
-                    SUM(score) as total_score,
-                    SUM(total) as total_questions
-                FROM quiz_results 
-                WHERE user_id = ?
-            ''', (session['user_id'],)).fetchone()
+            # Calculate accuracy rate from quiz results (using both tables for compatibility)
+            total_score = 0
+            total_questions = 0
+            
+            try:
+                quiz_stats_enhanced = conn.execute('''
+                    SELECT 
+                        SUM(score) as total_score,
+                        SUM(total) as total_questions
+                    FROM quiz_results_enhanced 
+                    WHERE user_id = ?
+                ''', (session['user_id'],)).fetchone()
+                total_score += quiz_stats_enhanced['total_score'] or 0
+                total_questions += quiz_stats_enhanced['total_questions'] or 0
+            except Exception as e:
+                print(f"Error querying quiz_results_enhanced: {e}")
+
+            try:
+                quiz_stats_legacy = conn.execute('''
+                    SELECT 
+                        SUM(score) as total_score,
+                        SUM(total) as total_questions
+                    FROM quiz_results 
+                    WHERE user_id = ?
+                ''', (session['user_id'],)).fetchone()
+                total_score += quiz_stats_legacy['total_score'] or 0
+                total_questions += quiz_stats_legacy['total_questions'] or 0
+            except Exception as e:
+                print(f"Error querying quiz_results (legacy): {e}")
 
             accuracy_rate = 0
-            if quiz_stats['total_questions'] and quiz_stats['total_questions'] > 0:
-                accuracy_rate = (quiz_stats['total_score'] / quiz_stats['total_questions']) * 100
+            if total_questions and total_questions > 0:
+                accuracy_rate = (total_score / total_questions) * 100
 
             # Calculate overall progress percentage (weighted average)
             progress_percentage = min(100, (
@@ -2921,13 +3079,13 @@ def get_progress_stats():
             ''', (session['user_id'],)).fetchall()
 
             return jsonify({
-                'words_learned': words_learned,
-                'conversation_count': conversation_count,
-                'accuracy_rate': round(accuracy_rate, 1),
-                'progress_percentage': round(progress_percentage, 1),
-                'daily_streak': new_streak,
-                'new_achievements': achievements,
-                'achievements': [dict(achievement) for achievement in user_achievements]
+                'words_learned': words_learned or 0,
+                'conversation_count': conversation_count or 0,
+                'accuracy_rate': round(accuracy_rate or 0, 1),
+                'progress_percentage': round(progress_percentage or 0, 1),
+                'daily_streak': new_streak or 0,
+                'new_achievements': achievements or [],
+                'achievements': [dict(achievement) for achievement in user_achievements] if user_achievements else []
             })
 
     except Exception as e:
