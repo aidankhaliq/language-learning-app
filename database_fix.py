@@ -1,6 +1,7 @@
 """
 Universal Database Fix - Final Solution
 This completely eliminates ALL conn.execute compatibility issues
+Fixed to avoid circular imports
 """
 
 class UniversalConnection:
@@ -124,68 +125,94 @@ class MockCursor:
         return []
 
 
-def patch_app_connection():
-    """Patch the app's get_db_connection function"""
-    try:
-        # Import the app module
-        import app
-        
-        # Store the original function
-        original_get_db_connection = app.get_db_connection
-        
-        def new_get_db_connection():
-            """New connection function that returns wrapped connection"""
+def create_universal_get_db_connection():
+    """Create a universal get_db_connection function"""
+    def get_db_connection():
+        """Universal database connection that works with both PostgreSQL and SQLite"""
+        try:
+            from database_config import get_db_connection as get_raw_connection, create_tables
+            import sys
+            
+            raw_conn, db_type = get_raw_connection()
+            print(f"📊 Database connection type: {db_type}")
+            
+            # Initialize tables
             try:
-                from database_config import get_db_connection as get_raw_connection, create_tables
-                
-                raw_conn, db_type = get_raw_connection()
-                print(f"📊 Database connection type: {db_type}")
-                
-                # Initialize tables
+                create_tables(raw_conn, db_type)
+                print(f"✅ Tables created successfully for {db_type}")
+            except Exception as table_error:
+                print(f"⚠️ Table creation warning: {table_error}")
+            
+            if db_type == 'postgresql':
+                print("🐘 PostgreSQL setup complete")
+            else:
+                print("🔵 SQLite setup complete")
                 try:
-                    create_tables(raw_conn, db_type)
-                    print(f"✅ Tables created successfully for {db_type}")
-                except Exception as table_error:
-                    print(f"⚠️ Table creation warning: {table_error}")
-                
-                if db_type == 'postgresql':
-                    print("🐘 PostgreSQL setup complete")
-                else:
-                    print("🔵 SQLite setup complete")
-                    try:
-                        app._initialize_database_tables(raw_conn)
-                        app.ensure_user_columns_on_connection(raw_conn)
+                    # Get app module to call SQLite initialization functions
+                    app_module = sys.modules.get('app')
+                    if app_module and hasattr(app_module, '_initialize_database_tables'):
+                        app_module._initialize_database_tables(raw_conn)
+                        app_module.ensure_user_columns_on_connection(raw_conn)
                         raw_conn.commit()
-                    except Exception as e:
-                        print(f"SQLite initialization warning: {e}")
-                
-                return UniversalConnection(raw_conn, db_type)
-                
-            except Exception as e:
-                print(f"❌ Database connection failed: {e}")
-                import traceback
-                print(f"❌ Full traceback: {traceback.format_exc()}")
-                
-                # Emergency fallback
-                print("⚠️ Using emergency fallback SQLite database")
-                import sqlite3
-                import os
-                
-                db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'database_fallback.db')
-                raw_conn = sqlite3.connect(db_path)
-                raw_conn.row_factory = sqlite3.Row
-                
-                app._initialize_database_tables(raw_conn)
-                
-                return UniversalConnection(raw_conn, 'sqlite')
-        
-        # Replace the function
-        app.get_db_connection = new_get_db_connection
-        print("✅ App database connection patched successfully")
-        
-    except Exception as e:
-        print(f"❌ Failed to patch app connection: {e}")
+                except Exception as e:
+                    print(f"SQLite initialization warning: {e}")
+            
+            return UniversalConnection(raw_conn, db_type)
+            
+        except Exception as e:
+            print(f"❌ Database connection failed: {e}")
+            import traceback
+            print(f"❌ Full traceback: {traceback.format_exc()}")
+            
+            # Emergency fallback
+            print("⚠️ Using emergency fallback SQLite database")
+            import sqlite3
+            import os
+            
+            db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'database_fallback.db')
+            raw_conn = sqlite3.connect(db_path)
+            raw_conn.row_factory = sqlite3.Row
+            
+            # Try to initialize tables without app module
+            try:
+                import sys
+                app_module = sys.modules.get('app')
+                if app_module and hasattr(app_module, '_initialize_database_tables'):
+                    app_module._initialize_database_tables(raw_conn)
+            except Exception:
+                # Basic table creation as fallback
+                raw_conn.execute('''
+                    CREATE TABLE IF NOT EXISTS users (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        username TEXT UNIQUE NOT NULL,
+                        email TEXT UNIQUE NOT NULL,
+                        password TEXT NOT NULL,
+                        security_answer TEXT NOT NULL
+                    )
+                ''')
+                raw_conn.commit()
+            
+            return UniversalConnection(raw_conn, 'sqlite')
+    
+    return get_db_connection
 
 
-# Apply the patch when imported
-patch_app_connection() 
+def patch_app_after_import():
+    """Patch the app's get_db_connection after the app module is fully loaded"""
+    import sys
+    
+    # Check if app module is loaded
+    app_module = sys.modules.get('app')
+    if app_module:
+        try:
+            # Replace the get_db_connection function
+            app_module.get_db_connection = create_universal_get_db_connection()
+            print("✅ App database connection patched successfully")
+        except Exception as e:
+            print(f"❌ Failed to patch app connection: {e}")
+    else:
+        print("⚠️ App module not yet loaded - patch will be applied later")
+
+
+# Don't apply the patch immediately - let the app module load first
+print("🔧 Universal database fix loaded - ready to patch when app is ready") 

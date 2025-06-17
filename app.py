@@ -92,6 +92,13 @@ def get_db_connection():
     # This is a placeholder - the actual function is replaced by database_fix.py
     pass
 
+# Apply the database fix patch now that the function is defined
+try:
+    from database_fix import patch_app_after_import
+    patch_app_after_import()
+except Exception as e:
+    print(f"⚠️ Could not apply database patch: {e}")
+
 def ensure_user_columns_on_connection(conn):
     """Ensures all required tables exist on the given connection"""
     try:
