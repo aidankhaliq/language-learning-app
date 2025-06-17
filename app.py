@@ -19,6 +19,15 @@ from random import sample, shuffle
 from functools import wraps
 import time
 
+# Apply PostgreSQL compatibility patch early
+try:
+    import quick_fix
+    print("🔧 PostgreSQL compatibility patch loaded")
+except ImportError as e:
+    print(f"⚠️ Could not load compatibility patch: {e}")
+except Exception as e:
+    print(f"⚠️ Error loading compatibility patch: {e}")
+
 # Third-party imports
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_file, send_from_directory
 from flask_cors import CORS
@@ -43,9 +52,6 @@ except ImportError:
 app = Flask(__name__)
 CORS(app)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'FL4sk-L4ngu4g3-L34rn1ng-S3cr3t-K3y-2024-S3cur3-R4nd0m-K3y-P3rs1st3nc3')
-
-# Apply PostgreSQL compatibility patch
-import quick_fix
 
 # --- File Upload Configuration ---
 UPLOAD_FOLDER = 'static/uploads/'
@@ -567,12 +573,17 @@ def add_notification(user_id, notification_message):
         user_id (int): The ID of the user to notify
         notification_message (str): The notification message
     """
-    with get_db_connection() as conn:
-        conn.execute(
+    from database_helpers import execute_query, commit_transaction
+    
+    conn = get_db_connection()
+    try:
+        execute_query(conn, 
             "INSERT INTO notifications (user_id, message, timestamp) VALUES (?, ?, ?)",
-            (user_id, notification_message, datetime.now())
-        )
-        conn.commit()
+            (user_id, notification_message, datetime.now()))
+        commit_transaction(conn)
+    finally:
+        if hasattr(conn, 'close'):
+            conn.close()
 
 def update_user_progress(user_id):
     """
@@ -858,10 +869,16 @@ def register():
         
         if register_user(username, email, password, security_answer):
             # Get the newly created user ID to send welcome notification
-            with get_db_connection() as conn:
-                new_user = conn.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
+            from database_helpers import execute_query
+            
+            conn = get_db_connection()
+            try:
+                new_user = execute_query(conn, "SELECT id FROM users WHERE email = ?", (email,), fetch_one=True)
                 if new_user:
                     add_notification(new_user['id'], f"🎉 Welcome to the Language Learning Platform, {username}! Start your learning journey today.")
+            finally:
+                if hasattr(conn, 'close'):
+                    conn.close()
             
             flash('Registration successful! Please login.', 'success')
             return redirect(url_for('login'))
