@@ -96,7 +96,13 @@ def get_db_connection():
             pass
         else:
             # SQLite - already configured with Row factory
-            pass
+            # Also call the old initialization for SQLite compatibility
+            try:
+                _initialize_database_tables(conn)
+                ensure_user_columns_on_connection(conn)
+                conn.commit()
+            except Exception as e:
+                print(f"SQLite initialization warning: {e}")
         
         return conn
         
