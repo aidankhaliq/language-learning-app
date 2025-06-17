@@ -12,3 +12,8 @@ accelerate==0.27.0
 email-validator==2.2.0
 gevent==24.2.1
 psycopg2-binary==2.9.9
+pandas==2.2.3
+numpy==1.26.4
+openpyxl==3.1.5
+python-dotenv==1.0.1
+sentencepiece==0.2.0
