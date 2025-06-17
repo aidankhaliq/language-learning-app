@@ -19,14 +19,14 @@ from random import sample, shuffle
 from functools import wraps
 import time
 
-# Apply PostgreSQL compatibility patch early
+# Apply universal database fix - eliminates ALL conn.execute issues
 try:
-    import quick_fix
-    print("🔧 PostgreSQL compatibility patch loaded")
+    import database_fix
+    print("🔧 Universal database fix loaded")
 except ImportError as e:
-    print(f"⚠️ Could not load compatibility patch: {e}")
+    print(f"⚠️ Could not load database fix: {e}")
 except Exception as e:
-    print(f"⚠️ Error loading compatibility patch: {e}")
+    print(f"⚠️ Error loading database fix: {e}")
 
 # Third-party imports
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_file, send_from_directory
@@ -86,59 +86,11 @@ vision_model = genai.GenerativeModel('gemini-1.5-flash')
 
 def get_db_connection():
     """
-    Get a connection to the database (PostgreSQL in production, SQLite locally).
-    
-    Returns:
-        Connection: A configured database connection
+    This function will be replaced by the database_fix module
+    to provide universal compatibility.
     """
-    from database_config import get_db_connection as get_configured_connection, create_tables
-    
-    try:
-        conn, db_type = get_configured_connection()
-        print(f"📊 Database connection type: {db_type}")
-        
-        # Initialize database tables if they don't exist
-        try:
-            create_tables(conn, db_type)
-            print(f"✅ Tables created successfully for {db_type}")
-        except Exception as table_error:
-            print(f"❌ Table creation failed for {db_type}: {table_error}")
-            raise table_error
-        
-        # Handle different database types for row access
-        if db_type == 'postgresql':
-            # PostgreSQL already uses RealDictCursor
-            print("🐘 PostgreSQL setup complete")
-        else:
-            # SQLite - already configured with Row factory
-            print("🔵 SQLite setup complete")
-            # Also call the old initialization for SQLite compatibility
-            try:
-                _initialize_database_tables(conn)
-                ensure_user_columns_on_connection(conn)
-                conn.commit()
-            except Exception as e:
-                print(f"SQLite initialization warning: {e}")
-        
-        return conn
-        
-    except Exception as e:
-        print(f"❌ Database connection failed: {e}")
-        print(f"❌ Error type: {type(e).__name__}")
-        import traceback
-        print(f"❌ Full traceback: {traceback.format_exc()}")
-        
-        # Emergency fallback to local SQLite
-        print("⚠️ Using emergency fallback SQLite database")
-        
-        db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'database_fallback.db')
-        conn = sqlite3.connect(db_path)
-        conn.row_factory = sqlite3.Row
-        
-        # Initialize with SQLite tables
-        _initialize_database_tables(conn)
-        
-        return conn
+    # This is a placeholder - the actual function is replaced by database_fix.py
+    pass
 
 def ensure_user_columns_on_connection(conn):
     """Ensures all required tables exist on the given connection"""
@@ -468,34 +420,31 @@ def register_user(username, email, password, security_answer):
     Returns:
         bool: True if registration succeeded, False otherwise
     """
-    from database_helpers import execute_query, commit_transaction
-    
     print(f"🔍 REGISTERING USER: {username}, {email}")
     
-    conn = get_db_connection()
-    try:
+    with get_db_connection() as conn:
         # Check if email already exists
-        existing_user = execute_query(conn, "SELECT id FROM users WHERE email = ?", (email,), fetch_one=True)
+        existing_user = conn.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
         if existing_user:
             print(f"❌ User already exists with email: {email}")
             return False
 
         try:
             print(f"📝 Inserting new user: {username}")
-            execute_query(conn, 
+            result = conn.execute(
                 "INSERT INTO users (username, email, password, security_answer) VALUES (?, ?, ?, ?)",
                 (username, email, generate_password_hash(password), security_answer))
             
             # FORCE COMMIT
-            commit_transaction(conn)
+            conn.commit()
             
             # Verify the user was actually inserted
-            new_user = execute_query(conn, "SELECT id, username FROM users WHERE email = ?", (email,), fetch_one=True)
+            new_user = conn.execute("SELECT id, username FROM users WHERE email = ?", (email,)).fetchone()
             if new_user:
                 print(f"✅ USER SUCCESSFULLY REGISTERED: ID={new_user['id']}, Username={new_user['username']}")
                 
                 # Double-check by counting total users
-                total_users = execute_query(conn, "SELECT COUNT(*) as count FROM users", fetch_one=True)['count']
+                total_users = conn.execute("SELECT COUNT(*) as count FROM users").fetchone()['count']
                 print(f"📊 Total users in database: {total_users}")
                 return True
             else:
@@ -508,9 +457,6 @@ def register_user(username, email, password, security_answer):
             else:
                 print(f"❌ UNEXPECTED ERROR during registration: {e}")
             return False
-    finally:
-        if hasattr(conn, 'close'):
-            conn.close()
 
 # --- Helper Functions ---
 # These utility functions support various features throughout the application
@@ -573,17 +519,12 @@ def add_notification(user_id, notification_message):
         user_id (int): The ID of the user to notify
         notification_message (str): The notification message
     """
-    from database_helpers import execute_query, commit_transaction
-    
-    conn = get_db_connection()
-    try:
-        execute_query(conn, 
+    with get_db_connection() as conn:
+        conn.execute(
             "INSERT INTO notifications (user_id, message, timestamp) VALUES (?, ?, ?)",
-            (user_id, notification_message, datetime.now()))
-        commit_transaction(conn)
-    finally:
-        if hasattr(conn, 'close'):
-            conn.close()
+            (user_id, notification_message, datetime.now())
+        )
+        conn.commit()
 
 def update_user_progress(user_id):
     """
@@ -869,16 +810,10 @@ def register():
         
         if register_user(username, email, password, security_answer):
             # Get the newly created user ID to send welcome notification
-            from database_helpers import execute_query
-            
-            conn = get_db_connection()
-            try:
-                new_user = execute_query(conn, "SELECT id FROM users WHERE email = ?", (email,), fetch_one=True)
+            with get_db_connection() as conn:
+                new_user = conn.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
                 if new_user:
                     add_notification(new_user['id'], f"🎉 Welcome to the Language Learning Platform, {username}! Start your learning journey today.")
-            finally:
-                if hasattr(conn, 'close'):
-                    conn.close()
             
             flash('Registration successful! Please login.', 'success')
             return redirect(url_for('login'))
