@@ -1065,17 +1065,34 @@ def admin_login():
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
+        
+        print(f"🔐 Admin login attempt: {email}")
+        
         # Only check email and password for admin login
         with get_db_connection() as conn:
             user = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
-            if user and user['is_admin'] and check_password_hash(user['password'], password):
-                session['user_id'] = user['id']
-                session['username'] = user['username']
-                session['email'] = user['email']
-                session['is_admin'] = True
-                return redirect(url_for('admin_dashboard'))
+            
+            if user:
+                print(f"👤 User found: ID={user['id']}, Username={user['username']}, IsAdmin={user['is_admin']}")
+                
+                if user['is_admin']:
+                    if check_password_hash(user['password'], password):
+                        print("✅ Admin login successful")
+                        session['user_id'] = user['id']
+                        session['username'] = user['username']
+                        session['email'] = user['email']
+                        session['is_admin'] = True
+                        return redirect(url_for('admin_dashboard'))
+                    else:
+                        print("❌ Password check failed")
+                        flash('Invalid password.', 'error')
+                else:
+                    print("❌ User is not an admin")
+                    flash('Insufficient permissions - not an admin user.', 'error')
             else:
-                flash('Invalid credentials or insufficient permissions.', 'error')
+                print("❌ User not found")
+                flash('User not found.', 'error')
+                
     return render_template('admin_login.html')
 
 @app.route('/admin_dashboard')
@@ -3862,6 +3879,63 @@ def debug_render_config():
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/debug/create_admin')
+def debug_create_admin():
+    """Debug endpoint to force create admin user"""
+    try:
+        with get_db_connection() as conn:
+            from werkzeug.security import generate_password_hash
+            
+            # Check if admin exists
+            admin_check = conn.execute("SELECT * FROM users WHERE email = ?", ('admin@example.com',)).fetchone()
+            
+            if admin_check:
+                # Update existing user to be admin
+                conn.execute("UPDATE users SET is_admin = 1 WHERE email = ?", ('admin@example.com',))
+                conn.commit()
+                
+                return jsonify({
+                    'status': 'success',
+                    'message': 'Admin privileges granted to existing user',
+                    'user_id': admin_check['id'],
+                    'username': admin_check['username'],
+                    'email': 'admin@example.com',
+                    'credentials': 'admin@example.com / admin123'
+                })
+            else:
+                # Create new admin user
+                conn.execute('''
+                    INSERT INTO users (username, email, password, security_answer, is_admin)
+                    VALUES (?, ?, ?, ?, ?)
+                ''', (
+                    'admin',
+                    'admin@example.com',
+                    generate_password_hash('admin123'),
+                    generate_password_hash('admin'),
+                    1
+                ))
+                conn.commit()
+                
+                # Get the newly created user
+                new_admin = conn.execute("SELECT * FROM users WHERE email = ?", ('admin@example.com',)).fetchone()
+                
+                return jsonify({
+                    'status': 'success',
+                    'message': 'Admin user created successfully',
+                    'user_id': new_admin['id'],
+                    'username': new_admin['username'],
+                    'email': 'admin@example.com',
+                    'credentials': 'admin@example.com / admin123'
+                })
+                
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'status': 'error',
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
 
 # Initialize database on startup - handled in get_db_connection()
 print("✅ Database initialization handled by connection setup")

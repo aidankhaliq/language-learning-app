@@ -232,6 +232,8 @@ def create_postgresql_tables(conn):
             id SERIAL PRIMARY KEY,
             user_id INTEGER NOT NULL,
             achievement_type VARCHAR(100) NOT NULL,
+            achievement_name VARCHAR(255),
+            description TEXT,
             earned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users (id)
         )
@@ -263,7 +265,7 @@ def create_postgresql_tables(conn):
     ''')
     
     try:
-        # Create admin user if it doesn't exist
+        # Check if admin user exists
         cursor.execute("SELECT COUNT(*) FROM users WHERE email = %s", ('admin@example.com',))
         result = cursor.fetchone()
         admin_exists = result[0] > 0 if result else False
@@ -284,8 +286,24 @@ def create_postgresql_tables(conn):
             print("✅ Admin user created: admin@example.com / admin123")
         else:
             print("ℹ️ Admin user already exists")
+            
+        # Verify admin user exists and has correct privileges
+        cursor.execute("SELECT id, username, is_admin FROM users WHERE email = %s", ('admin@example.com',))
+        admin_check = cursor.fetchone()
+        if admin_check:
+            admin_id, admin_username, is_admin_flag = admin_check
+            print(f"✅ Admin verification: ID={admin_id}, Username={admin_username}, IsAdmin={is_admin_flag}")
+            if not is_admin_flag:
+                print("⚠️ Admin user exists but is_admin flag is not set - fixing...")
+                cursor.execute("UPDATE users SET is_admin = 1 WHERE email = %s", ('admin@example.com',))
+                print("✅ Admin privileges fixed")
+        else:
+            print("❌ Admin user verification failed")
+            
     except Exception as e:
-        print(f"⚠️ Admin user creation warning: {e}")
+        print(f"⚠️ Admin user creation error: {e}")
+        import traceback
+        print(f"⚠️ Full traceback: {traceback.format_exc()}")
     
     conn.commit()
     print("✅ PostgreSQL tables created successfully")
