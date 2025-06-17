@@ -44,6 +44,9 @@ app = Flask(__name__)
 CORS(app)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'FL4sk-L4ngu4g3-L34rn1ng-S3cr3t-K3y-2024-S3cur3-R4nd0m-K3y-P3rs1st3nc3')
 
+# Apply PostgreSQL compatibility patch
+import quick_fix
+
 # --- File Upload Configuration ---
 UPLOAD_FOLDER = 'static/uploads/'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -459,43 +462,49 @@ def register_user(username, email, password, security_answer):
     Returns:
         bool: True if registration succeeded, False otherwise
     """
+    from database_helpers import execute_query, commit_transaction
+    
     print(f"🔍 REGISTERING USER: {username}, {email}")
     
-    with get_db_connection() as conn:
+    conn = get_db_connection()
+    try:
         # Check if email already exists
-        existing_user = conn.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
+        existing_user = execute_query(conn, "SELECT id FROM users WHERE email = ?", (email,), fetch_one=True)
         if existing_user:
             print(f"❌ User already exists with email: {email}")
             return False
 
         try:
             print(f"📝 Inserting new user: {username}")
-            result = conn.execute(
+            execute_query(conn, 
                 "INSERT INTO users (username, email, password, security_answer) VALUES (?, ?, ?, ?)",
                 (username, email, generate_password_hash(password), security_answer))
             
             # FORCE COMMIT
-            conn.commit()
+            commit_transaction(conn)
             
             # Verify the user was actually inserted
-            new_user = conn.execute("SELECT id, username FROM users WHERE email = ?", (email,)).fetchone()
+            new_user = execute_query(conn, "SELECT id, username FROM users WHERE email = ?", (email,), fetch_one=True)
             if new_user:
                 print(f"✅ USER SUCCESSFULLY REGISTERED: ID={new_user['id']}, Username={new_user['username']}")
                 
                 # Double-check by counting total users
-                total_users = conn.execute("SELECT COUNT(*) as count FROM users").fetchone()['count']
+                total_users = execute_query(conn, "SELECT COUNT(*) as count FROM users", fetch_one=True)['count']
                 print(f"📊 Total users in database: {total_users}")
                 return True
             else:
                 print(f"❌ FAILED: User not found after registration")
                 return False
                 
-        except sqlite3.IntegrityError as e:
-            print(f"❌ INTEGRITY ERROR during registration: {e}")
-            return False
         except Exception as e:
-            print(f"❌ UNEXPECTED ERROR during registration: {e}")
+            if 'integrity' in str(e).lower() or 'unique' in str(e).lower():
+                print(f"❌ INTEGRITY ERROR during registration: {e}")
+            else:
+                print(f"❌ UNEXPECTED ERROR during registration: {e}")
             return False
+    finally:
+        if hasattr(conn, 'close'):
+            conn.close()
 
 # --- Helper Functions ---
 # These utility functions support various features throughout the application
