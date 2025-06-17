@@ -262,24 +262,30 @@ def create_postgresql_tables(conn):
         )
     ''')
     
-    # Create admin user if it doesn't exist
-    cursor.execute("SELECT COUNT(*) FROM users WHERE email = %s", ('admin@example.com',))
-    admin_exists = cursor.fetchone()[0] > 0
-    
-    if not admin_exists:
-        from werkzeug.security import generate_password_hash
-        print("🔑 Creating admin user...")
-        cursor.execute('''
-            INSERT INTO users (username, email, password, security_answer, is_admin)
-            VALUES (%s, %s, %s, %s, %s)
-        ''', (
-            'admin',
-            'admin@example.com', 
-            generate_password_hash('admin123'),
-            generate_password_hash('admin'),
-            1
-        ))
-        print("✅ Admin user created: admin@example.com / admin123")
+    try:
+        # Create admin user if it doesn't exist
+        cursor.execute("SELECT COUNT(*) FROM users WHERE email = %s", ('admin@example.com',))
+        result = cursor.fetchone()
+        admin_exists = result[0] > 0 if result else False
+        
+        if not admin_exists:
+            from werkzeug.security import generate_password_hash
+            print("🔑 Creating admin user...")
+            cursor.execute('''
+                INSERT INTO users (username, email, password, security_answer, is_admin)
+                VALUES (%s, %s, %s, %s, %s)
+            ''', (
+                'admin',
+                'admin@example.com', 
+                generate_password_hash('admin123'),
+                generate_password_hash('admin'),
+                1
+            ))
+            print("✅ Admin user created: admin@example.com / admin123")
+        else:
+            print("ℹ️ Admin user already exists")
+    except Exception as e:
+        print(f"⚠️ Admin user creation warning: {e}")
     
     conn.commit()
     print("✅ PostgreSQL tables created successfully")

@@ -86,16 +86,23 @@ def get_db_connection():
     
     try:
         conn, db_type = get_configured_connection()
+        print(f"📊 Database connection type: {db_type}")
         
         # Initialize database tables if they don't exist
-        create_tables(conn, db_type)
+        try:
+            create_tables(conn, db_type)
+            print(f"✅ Tables created successfully for {db_type}")
+        except Exception as table_error:
+            print(f"❌ Table creation failed for {db_type}: {table_error}")
+            raise table_error
         
         # Handle different database types for row access
         if db_type == 'postgresql':
             # PostgreSQL already uses RealDictCursor
-            pass
+            print("🐘 PostgreSQL setup complete")
         else:
             # SQLite - already configured with Row factory
+            print("🔵 SQLite setup complete")
             # Also call the old initialization for SQLite compatibility
             try:
                 _initialize_database_tables(conn)
@@ -108,6 +115,10 @@ def get_db_connection():
         
     except Exception as e:
         print(f"❌ Database connection failed: {e}")
+        print(f"❌ Error type: {type(e).__name__}")
+        import traceback
+        print(f"❌ Full traceback: {traceback.format_exc()}")
+        
         # Emergency fallback to local SQLite
         print("⚠️ Using emergency fallback SQLite database")
         
@@ -3740,6 +3751,49 @@ def debug_database_connection():
             debug_info['connection_test'] = f'FAILED: {e}'
         
         return jsonify(debug_info)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/debug/env/check')
+def debug_env_check():
+    """Check environment variables and PostgreSQL setup"""
+    try:
+        database_url = os.getenv('DATABASE_URL')
+        
+        env_check = {
+            'database_url_set': bool(database_url),
+            'database_url_length': len(database_url) if database_url else 0,
+            'database_url_starts_with': database_url[:20] if database_url else None,
+            'render_env': os.getenv('RENDER'),
+            'render_service_id': os.getenv('RENDER_SERVICE_ID'),
+            'port': os.getenv('PORT'),
+            'postgresql_test': None
+        }
+        
+        # Test PostgreSQL connection specifically
+        if database_url:
+            try:
+                import psycopg2
+                from urllib.parse import urlparse
+                parsed = urlparse(database_url)
+                
+                # Test connection
+                test_conn = psycopg2.connect(
+                    host=parsed.hostname,
+                    port=parsed.port or 5432,
+                    database=parsed.path[1:],
+                    user=parsed.username,
+                    password=parsed.password
+                )
+                test_conn.close()
+                env_check['postgresql_test'] = 'SUCCESS'
+            except Exception as pg_error:
+                env_check['postgresql_test'] = f'FAILED: {pg_error}'
+        else:
+            env_check['postgresql_test'] = 'NO DATABASE_URL SET'
+        
+        return jsonify(env_check)
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
