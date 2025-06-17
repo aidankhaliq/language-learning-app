@@ -3676,31 +3676,54 @@ def debug_database_detailed():
         env_info['database_size'] = os.path.getsize(db_path) if os.path.exists(db_path) else 0
         
         # Now connect and get database info
-        with get_db_connection() as conn:
-            # Get table info
-            tables = conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
-            table_names = [table[0] for table in tables]
+        conn = get_db_connection()
+        try:
+            from database_config import get_database_config
+            db_type, _ = get_database_config()
             
-            # Get user count and recent users
-            user_count = conn.execute("SELECT COUNT(*) as count FROM users").fetchone()['count']
-            recent_users = conn.execute("SELECT id, username, email FROM users ORDER BY id DESC LIMIT 5").fetchall()
-            recent_user_list = [{'id': u['id'], 'username': u['username'], 'email': u['email']} for u in recent_users]
-            
-            # Get question counts by language
-            question_counts = conn.execute("""
-                SELECT language, COUNT(*) as count 
-                FROM quiz_questions 
-                GROUP BY language 
-                ORDER BY language
-            """).fetchall()
-            question_data = [{'language': q[0], 'count': q[1]} for q in question_counts]
-            
-            # Total questions
-            total_questions = conn.execute("SELECT COUNT(*) as count FROM quiz_questions").fetchone()['count']
+            if db_type == 'postgresql':
+                cursor = conn.cursor()
+                
+                # Get table info for PostgreSQL
+                cursor.execute("SELECT tablename FROM pg_tables WHERE schemaname = 'public'")
+                tables = cursor.fetchall()
+                table_names = [table[0] for table in tables]
+                
+                # Get user count and recent users
+                cursor.execute("SELECT COUNT(*) FROM users")
+                user_count = cursor.fetchone()[0]
+                
+                cursor.execute("SELECT id, username, email FROM users ORDER BY id DESC LIMIT 5")
+                recent_users = cursor.fetchall()
+                recent_user_list = [{'id': u[0], 'username': u[1], 'email': u[2]} for u in recent_users]
+                
+                # Get question counts by language
+                cursor.execute("SELECT language, COUNT(*) FROM quiz_questions GROUP BY language ORDER BY language")
+                question_counts = cursor.fetchall()
+                question_data = [{'language': q[0], 'count': q[1]} for q in question_counts]
+                
+                # Total questions
+                cursor.execute("SELECT COUNT(*) FROM quiz_questions")
+                total_questions = cursor.fetchone()[0]
+                
+            else:
+                # SQLite handling
+                tables = conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+                table_names = [table[0] for table in tables]
+                
+                user_count = conn.execute("SELECT COUNT(*) as count FROM users").fetchone()['count']
+                recent_users = conn.execute("SELECT id, username, email FROM users ORDER BY id DESC LIMIT 5").fetchall()
+                recent_user_list = [{'id': u['id'], 'username': u['username'], 'email': u['email']} for u in recent_users]
+                
+                question_counts = conn.execute("SELECT language, COUNT(*) as count FROM quiz_questions GROUP BY language ORDER BY language").fetchall()
+                question_data = [{'language': q[0], 'count': q[1]} for q in question_counts]
+                
+                total_questions = conn.execute("SELECT COUNT(*) as count FROM quiz_questions").fetchone()['count']
             
             return jsonify({
                 'environment': env_info,
                 'database': {
+                    'type': db_type,
                     'tables': table_names,
                     'total_users': user_count,
                     'recent_users': recent_user_list,
@@ -3708,6 +3731,9 @@ def debug_database_detailed():
                     'total_questions': total_questions
                 }
             })
+        finally:
+            if hasattr(conn, 'close'):
+                conn.close()
     except Exception as e:
         return jsonify({'error': str(e), 'environment': env_info if 'env_info' in locals() else 'Failed to get env info'}), 500
 
@@ -3869,12 +3895,8 @@ def debug_render_config():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# Initialize database on startup
-try:
-    ensure_user_columns()
-    print("✅ Database initialized successfully")
-except Exception as e:
-    print(f"⚠️ Database initialization failed: {e}")
+# Initialize database on startup - handled in get_db_connection()
+print("✅ Database initialization handled by connection setup")
 
 # Add model caching variables
 _blip_processor = None
