@@ -77,72 +77,42 @@ vision_model = genai.GenerativeModel('gemini-1.5-flash')
 
 def get_db_connection():
     """
-    Creates and returns a connection to the SQLite database with proper configuration.
-    Supports both local development and Render deployment with persistent storage.
-    Initializes database tables if they don't exist.
-
+    Get a connection to the database (PostgreSQL in production, SQLite locally).
+    
     Returns:
-        sqlite3.Connection: A configured database connection
+        Connection: A configured database connection
     """
-    # FORCE PERSISTENT STORAGE ON RENDER - Check for Render environment variables
-    is_render = os.getenv('RENDER') is not None or os.getenv('RENDER_SERVICE_ID') is not None
+    from database_config import get_db_connection as get_configured_connection, create_tables
     
-    if is_render or os.path.exists('/data'):
-        db_path = '/data/database.db'
-        print(f"🔴 RENDER/PRODUCTION MODE: Using persistent storage: {db_path}")
-        
-        # Ensure /data directory exists and is writable
-        try:
-            os.makedirs('/data', exist_ok=True)
-            # Test write permissions
-            test_file = '/data/test_write.tmp'
-            with open(test_file, 'w') as f:
-                f.write('test')
-            os.remove(test_file)
-            print(f"✅ /data directory is writable")
-        except Exception as e:
-            print(f"❌ ERROR: /data directory is not writable: {e}")
-            # Fallback but log the issue
-            db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'database.db')
-            print(f"⚠️ FALLBACK: Using local database: {db_path}")
-    else:
-        # Local development - use database in current directory
-        db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'database.db')
-        print(f"🔵 LOCAL MODE: Using local database: {db_path}")
-    
-    # Detailed logging about database status
-    db_exists_before = os.path.exists(db_path)
-    db_size_before = os.path.getsize(db_path) if db_exists_before else 0
-    print(f"📊 Database status: exists={db_exists_before}, size={db_size_before} bytes")
-    
-    # Ensure the directory exists
-    os.makedirs(os.path.dirname(db_path), exist_ok=True)
-    
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row  # This allows accessing columns by name
-    conn.execute('PRAGMA busy_timeout = 30000')  # 30 second timeout to avoid locking issues
-    conn.execute('PRAGMA journal_mode = WAL')    # Better for concurrent access
-    
-    # FORCE SYNC TO DISK
-    conn.execute('PRAGMA synchronous = FULL')    # Ensure data is written to disk
-    
-    # Initialize database tables if they don't exist
-    _initialize_database_tables(conn)
-    
-    # Also call ensure_user_columns to create any additional tables
     try:
-        ensure_user_columns_on_connection(conn)
+        conn, db_type = get_configured_connection()
+        
+        # Initialize database tables if they don't exist
+        create_tables(conn, db_type)
+        
+        # Handle different database types for row access
+        if db_type == 'postgresql':
+            # PostgreSQL already uses RealDictCursor
+            pass
+        else:
+            # SQLite - already configured with Row factory
+            pass
+        
+        return conn
+        
     except Exception as e:
-        print(f"Error in ensure_user_columns_on_connection: {e}")
-    
-    # FORCE COMMIT AND SYNC
-    conn.commit()
-    
-    # Check database status after initialization
-    db_size_after = os.path.getsize(db_path)
-    print(f"📊 Database after init: size={db_size_after} bytes")
-    
-    return conn
+        print(f"❌ Database connection failed: {e}")
+        # Emergency fallback to local SQLite
+        print("⚠️ Using emergency fallback SQLite database")
+        
+        db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'database_fallback.db')
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        
+        # Initialize with SQLite tables
+        _initialize_database_tables(conn)
+        
+        return conn
 
 def ensure_user_columns_on_connection(conn):
     """Ensures all required tables exist on the given connection"""
@@ -3658,7 +3628,9 @@ def debug_database_detailed():
             'RENDER_SERVICE_ID': os.getenv('RENDER_SERVICE_ID'),
             'cwd': os.getcwd(),
             '/data_exists': os.path.exists('/data'),
+            '/data_readable': os.access('/data', os.R_OK) if os.path.exists('/data') else False,
             '/data_writable': None,
+            '/data_executable': os.access('/data', os.X_OK) if os.path.exists('/data') else False,
             'database_path': None,
             'database_exists': None,
             'database_size': None
@@ -3677,7 +3649,7 @@ def debug_database_detailed():
         # Get database path info (without connecting)
         is_render = os.getenv('RENDER') is not None or os.getenv('RENDER_SERVICE_ID') is not None
         
-        if is_render or os.path.exists('/data'):
+        if is_render and os.path.exists('/data') and os.access('/data', os.W_OK):
             db_path = '/data/database.db'
         else:
             db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'database.db')
@@ -3721,6 +3693,121 @@ def debug_database_detailed():
             })
     except Exception as e:
         return jsonify({'error': str(e), 'environment': env_info if 'env_info' in locals() else 'Failed to get env info'}), 500
+
+@app.route('/debug/database/connection')
+def debug_database_connection():
+    """Debug database connection setup"""
+    try:
+        # Check environment variables
+        database_url = os.getenv('DATABASE_URL')
+        render_env = os.getenv('RENDER')
+        render_service = os.getenv('RENDER_SERVICE_ID')
+        
+        debug_info = {
+            'environment_variables': {
+                'DATABASE_URL': 'SET' if database_url else 'NOT SET',
+                'DATABASE_URL_preview': database_url[:20] + '...' if database_url else None,
+                'RENDER': render_env,
+                'RENDER_SERVICE_ID': render_service
+            },
+            'database_config_import': None,
+            'connection_test': None
+        }
+        
+        # Test database_config import
+        try:
+            from database_config import get_database_config
+            db_type, config = get_database_config()
+            debug_info['database_config_import'] = 'SUCCESS'
+            debug_info['detected_db_type'] = db_type
+            debug_info['config_preview'] = str(config)[:100] + '...' if len(str(config)) > 100 else str(config)
+        except Exception as e:
+            debug_info['database_config_import'] = f'FAILED: {e}'
+        
+        # Test actual connection
+        try:
+            from database_config import get_db_connection as get_configured_connection
+            conn, db_type = get_configured_connection()
+            debug_info['connection_test'] = f'SUCCESS - {db_type}'
+            conn.close()
+        except Exception as e:
+            debug_info['connection_test'] = f'FAILED: {e}'
+        
+        return jsonify(debug_info)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/debug/render/config')
+def debug_render_config():
+    """Check Render persistent storage configuration"""
+    try:
+        is_render = os.getenv('RENDER') is not None or os.getenv('RENDER_SERVICE_ID') is not None
+        
+        config_check = {
+            'render_detected': is_render,
+            'data_directory': {
+                'exists': os.path.exists('/data'),
+                'is_directory': os.path.isdir('/data') if os.path.exists('/data') else False,
+                'readable': os.access('/data', os.R_OK) if os.path.exists('/data') else False,
+                'writable': os.access('/data', os.W_OK) if os.path.exists('/data') else False,
+                'executable': os.access('/data', os.X_OK) if os.path.exists('/data') else False,
+            },
+            'database_location': None,
+            'recommendations': []
+        }
+        
+        # Determine database location
+        if is_render and os.path.exists('/data') and os.access('/data', os.W_OK):
+            config_check['database_location'] = '/data/database.db (PERSISTENT)'
+            config_check['recommendations'].append("✅ SUCCESS: Persistent storage is configured correctly!")
+        elif is_render:
+            config_check['database_location'] = 'local/ephemeral (DATA WILL BE LOST)'
+            if not os.path.exists('/data'):
+                config_check['recommendations'].append(
+                    "🚨 CRITICAL: /data directory doesn't exist. Add persistent disk in Render dashboard."
+                )
+            elif not os.access('/data', os.W_OK):
+                config_check['recommendations'].append(
+                    "🚨 CRITICAL: /data directory exists but is not writable. Check disk permissions."
+                )
+        else:
+            config_check['database_location'] = 'local development'
+            config_check['recommendations'].append("ℹ️ INFO: Running locally - persistent storage not needed.")
+        
+        # Test write if possible
+        write_test = None
+        if os.path.exists('/data'):
+            try:
+                test_file = '/data/test_config.tmp'
+                with open(test_file, 'w') as f:
+                    f.write('test')
+                os.remove(test_file)
+                write_test = "SUCCESS"
+            except Exception as e:
+                write_test = f"FAILED: {e}"
+        
+        config_check['write_test'] = write_test
+        
+        # Add instructions if there's a problem
+        if is_render and (not os.path.exists('/data') or not os.access('/data', os.W_OK)):
+            config_check['instructions'] = {
+                'steps': [
+                    "1. Go to your Render Dashboard",
+                    "2. Navigate to your service",
+                    "3. Go to Settings tab",
+                    "4. Scroll to 'Disks' section",
+                    "5. Click 'Add Disk' if no disk exists",
+                    "6. Configure: Name=sqlite-data, Mount Path=/data, Size=1GB",
+                    "7. Save and redeploy your service"
+                ],
+                'yaml_config': "disk:\n  name: sqlite-data\n  mountPath: /data\n  sizeGB: 1"
+            }
+        
+        return jsonify(config_check)
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # Initialize database on startup
 try:
