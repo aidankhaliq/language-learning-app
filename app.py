@@ -86,11 +86,10 @@ vision_model = genai.GenerativeModel('gemini-1.5-flash')
 
 def get_db_connection():
     """
-    This function will be replaced by the database_fix module
-    to provide universal compatibility.
+    Get bulletproof database connection with full error handling
     """
-    # This is a placeholder - the actual function is replaced by database_fix.py
-    pass
+    from database_config import get_db_connection as get_bulletproof_connection
+    return get_bulletproof_connection()
 
 # Apply the database fix patch now that the function is defined
 try:
@@ -136,179 +135,22 @@ def ensure_user_columns_on_connection(conn):
         print(f"Error creating additional tables: {e}")
 
 def _initialize_database_tables(conn):
-    """Initialize database tables if they don't exist"""
+    """Initialize database tables safely"""
     try:
-        # Check if users table exists
-        table_exists = conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='users';"
-        ).fetchone()
+        print("🔧 Initializing database tables...")
         
-        if not table_exists:
-            print("Users table doesn't exist - creating database tables...")
-            
-            # Create users table
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS users (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    username TEXT UNIQUE NOT NULL,
-                    email TEXT UNIQUE NOT NULL,
-                    password TEXT NOT NULL,
-                    security_answer TEXT NOT NULL,
-                    is_admin INTEGER DEFAULT 0,
-                    is_active INTEGER DEFAULT 1,
-                    reset_token TEXT,
-                    bio TEXT,
-                    urls TEXT,
-                    profile_picture TEXT,
-                    dark_mode INTEGER DEFAULT 0,
-                    name TEXT,
-                    phone TEXT,
-                    location TEXT,
-                    website TEXT,
-                    avatar TEXT,
-                    timezone TEXT,
-                    datetime_format TEXT
-                )
-            ''')
-            print("✅ Table 'users' created!")
-            
-            # Create other essential tables
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS notifications (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    message TEXT NOT NULL,
-                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    is_read INTEGER DEFAULT 0,
-                    FOREIGN KEY (user_id) REFERENCES users(id)
-                )
-            ''')
-            
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS chat_sessions (
-                    session_id TEXT PRIMARY KEY,
-                    user_id INTEGER NOT NULL,
-                    language TEXT NOT NULL,
-                    started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    last_message_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (user_id) REFERENCES users (id)
-                )
-            ''')
-            
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS chat_messages (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    session_id TEXT NOT NULL,
-                    message TEXT NOT NULL,
-                    bot_response TEXT NOT NULL,
-                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (session_id) REFERENCES chat_sessions (session_id)
-                )
-            ''')
-            
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS quiz_questions (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    language TEXT NOT NULL,
-                    difficulty TEXT NOT NULL,
-                    question TEXT NOT NULL,
-                    options TEXT NOT NULL,
-                    answer TEXT NOT NULL,
-                    question_type TEXT DEFAULT 'multiple_choice',
-                    points INTEGER DEFAULT 10,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS quiz_results_enhanced (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    language TEXT NOT NULL,
-                    difficulty TEXT NOT NULL,
-                    score INTEGER NOT NULL,
-                    total INTEGER NOT NULL,
-                    percentage REAL NOT NULL,
-                    passed INTEGER DEFAULT 0,
-                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    question_details TEXT NOT NULL,
-                    points_earned INTEGER DEFAULT 0,
-                    streak_bonus INTEGER DEFAULT 0,
-                    time_bonus INTEGER DEFAULT 0,
-                    FOREIGN KEY (user_id) REFERENCES users (id)
-                )
-            ''')
-            
-            # Create legacy quiz results table (for backward compatibility)
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS quiz_results (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    language TEXT NOT NULL,
-                    difficulty TEXT NOT NULL,
-                    score INTEGER NOT NULL,
-                    total INTEGER NOT NULL,
-                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (user_id) REFERENCES users (id)
-                )
-            ''')
-            
-            # Create study list table for word tracking
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS study_list (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    word TEXT NOT NULL,
-                    added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    note TEXT,
-                    language TEXT DEFAULT 'english',
-                    FOREIGN KEY (user_id) REFERENCES users (id),
-                    UNIQUE(user_id, word)
-                )
-            ''')
-            
-            # Create user progress table for metrics tracking
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS user_progress (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    words_learned INTEGER DEFAULT 0,
-                    conversation_count INTEGER DEFAULT 0,
-                    accuracy_rate FLOAT DEFAULT 0.0,
-                    daily_streak INTEGER DEFAULT 0,
-                    last_activity_date DATE,
-                    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (user_id) REFERENCES users (id)
-                )
-            ''')
-            
-            # Create achievements table
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS achievements (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    achievement_type TEXT NOT NULL,
-                    achievement_name TEXT NOT NULL,
-                    description TEXT NOT NULL,
-                    earned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (user_id) REFERENCES users (id)
-                )
-            ''')
-            
-            conn.commit()
-            print("✅ Essential database tables created!")
-            
-            # Log which tables exist for debugging
-            tables = conn.execute("SELECT name FROM sqlite_master WHERE type='table';").fetchall()
-            table_names = [table[0] for table in tables]
-            print(f"✅ Database tables: {', '.join(table_names)}")
-            
-        # Always ensure admin user and sample data exist (regardless of table creation)
-        _ensure_admin_user_and_sample_data(conn)
-            
+        # Create tables using the bulletproof wrapper
+        from database_config import create_tables
+        create_tables(conn)
+        
+        print("✅ Database tables initialized successfully")
+        return True
+        
     except Exception as e:
-        print(f"Error initializing database tables: {e}")
-        # Don't raise the exception to avoid breaking the app
+        print(f"❌ Database initialization error: {e}")
+        import traceback
+        print(f"Full traceback: {traceback.format_exc()}")
+        return False
 
 def _ensure_admin_user_and_sample_data(conn):
     """Ensure admin user and sample quiz questions exist"""
@@ -3084,6 +2926,8 @@ def get_progress_stats():
 
     try:
         with get_db_connection() as conn:
+            print(f"📊 Getting progress stats for user {session['user_id']}")
+            
             # Get or create progress record
             progress = conn.execute('SELECT * FROM user_progress WHERE user_id = ?',
                 (session['user_id'],)
@@ -3122,17 +2966,25 @@ def get_progress_stats():
                 new_streak = 1
 
             # Calculate additional stats
-            words_learned = conn.execute(
-                'SELECT COUNT(*) as count FROM study_list WHERE user_id = ?',
-                (session['user_id'],)
-            ).fetchone()['count']
-            print(f"Progress Stats - User {session['user_id']}: Words learned = {words_learned}")
+            try:
+                words_learned = conn.execute(
+                    'SELECT COUNT(*) as count FROM study_list WHERE user_id = ?',
+                    (session['user_id'],)
+                ).fetchone()['count']
+                print(f"Progress Stats - User {session['user_id']}: Words learned = {words_learned}")
+            except Exception as e:
+                print(f"Error getting words learned: {e}")
+                words_learned = 0
 
-            conversation_count = conn.execute(
-                'SELECT COUNT(DISTINCT session_id) as count FROM chat_sessions WHERE user_id = ?',
-                (session['user_id'],)
-            ).fetchone()['count']
-            print(f"Progress Stats - User {session['user_id']}: Conversations = {conversation_count}")
+            try:
+                conversation_count = conn.execute(
+                    'SELECT COUNT(DISTINCT session_id) as count FROM chat_sessions WHERE user_id = ?',
+                    (session['user_id'],)
+                ).fetchone()['count']
+                print(f"Progress Stats - User {session['user_id']}: Conversations = {conversation_count}")
+            except Exception as e:
+                print(f"Error getting conversation count: {e}")
+                conversation_count = 0
 
             # Calculate accuracy rate from quiz results (using both tables for compatibility)
             total_score = 0
@@ -3177,54 +3029,67 @@ def get_progress_stats():
 
             # Check for new achievements
             achievements = []
-            if words_learned >= 10 and not conn.execute(
-                'SELECT 1 FROM achievements WHERE user_id = ? AND achievement_type = ?',
-                (session['user_id'], 'words_10')
-            ).fetchone():
-                achievements.append({
-                    'type': 'words_10',
-                    'name': 'Word Collector',
-                    'description': 'Learned 10 words'
-                })
-                conn.execute(
-                    'INSERT INTO achievements (user_id, achievement_type, achievement_name, description) VALUES (?, ?, ?, ?)',
-                    (session['user_id'], 'words_10', 'Word Collector', 'Learned 10 words')
-                )
+            try:
+                if words_learned >= 10 and not conn.execute(
+                    'SELECT 1 FROM achievements WHERE user_id = ? AND achievement_type = ?',
+                    (session['user_id'], 'words_10')
+                ).fetchone():
+                    achievements.append({
+                        'type': 'words_10',
+                        'name': 'Word Collector',
+                        'description': 'Learned 10 words'
+                    })
+                    conn.execute(
+                        'INSERT INTO achievements (user_id, achievement_type, achievement_name, description) VALUES (?, ?, ?, ?)',
+                        (session['user_id'], 'words_10', 'Word Collector', 'Learned 10 words')
+                    )
 
-            if new_streak >= 7 and not conn.execute(
-                'SELECT 1 FROM achievements WHERE user_id = ? AND achievement_type = ?',
-                (session['user_id'], 'streak_7')
-            ).fetchone():
-                achievements.append({
-                    'type': 'streak_7',
-                    'name': 'Consistent Learner',
-                    'description': '7-day learning streak'
-                })
-                conn.execute(
-                    'INSERT INTO achievements (user_id, achievement_type, achievement_name, description) VALUES (?, ?, ?, ?)',
-                    (session['user_id'], 'streak_7', 'Consistent Learner', '7-day learning streak')
-                )
+                if new_streak >= 7 and not conn.execute(
+                    'SELECT 1 FROM achievements WHERE user_id = ? AND achievement_type = ?',
+                    (session['user_id'], 'streak_7')
+                ).fetchone():
+                    achievements.append({
+                        'type': 'streak_7',
+                        'name': 'Consistent Learner',
+                        'description': '7-day learning streak'
+                    })
+                    conn.execute(
+                        'INSERT INTO achievements (user_id, achievement_type, achievement_name, description) VALUES (?, ?, ?, ?)',
+                        (session['user_id'], 'streak_7', 'Consistent Learner', '7-day learning streak')
+                    )
+            except Exception as e:
+                print(f"Error checking/creating achievements: {e}")
 
             # Update progress record
-            conn.execute('''
-                UPDATE user_progress 
-                SET words_learned = ?,
-                    conversation_count = ?,
-                    accuracy_rate = ?,
-                    daily_streak = ?,
-                    last_activity_date = ?,
-                    last_updated = CURRENT_TIMESTAMP
-                WHERE user_id = ?
-            ''', (words_learned, conversation_count, accuracy_rate, new_streak, today, session['user_id']))
-            conn.commit()
+            try:
+                conn.execute('''
+                    UPDATE user_progress 
+                    SET words_learned = ?,
+                        conversation_count = ?,
+                        accuracy_rate = ?,
+                        daily_streak = ?,
+                        last_activity_date = ?,
+                        last_updated = CURRENT_TIMESTAMP
+                    WHERE user_id = ?
+                ''', (words_learned, conversation_count, accuracy_rate, new_streak, today, session['user_id']))
+                conn.commit()
+            except Exception as e:
+                print(f"Error updating progress record: {e}")
 
-            # Get all achievements
-            user_achievements = conn.execute('''
-                SELECT achievement_name, description, earned_at
-                FROM achievements
-                WHERE user_id = ?
-                ORDER BY earned_at DESC
-            ''', (session['user_id'],)).fetchall()
+            # Get all achievements with better error handling
+            user_achievements = []
+            try:
+                achievements_result = conn.execute('''
+                    SELECT achievement_type, achievement_name, description, earned_at
+                    FROM achievements
+                    WHERE user_id = ?
+                    ORDER BY earned_at DESC
+                ''', (session['user_id'],)).fetchall()
+                user_achievements = [dict(achievement) for achievement in achievements_result] if achievements_result else []
+                print(f"📈 Retrieved {len(user_achievements)} achievements for user {session['user_id']}")
+            except Exception as e:
+                print(f"Error getting user achievements: {e}")
+                user_achievements = []
 
             return jsonify({
                 'words_learned': words_learned or 0,
@@ -3233,11 +3098,13 @@ def get_progress_stats():
                 'progress_percentage': round(progress_percentage or 0, 1),
                 'daily_streak': new_streak or 0,
                 'new_achievements': achievements or [],
-                'achievements': [dict(achievement) for achievement in user_achievements] if user_achievements else []
+                'achievements': user_achievements
             })
 
     except Exception as e:
         print(f"Error getting progress stats: {e}")
+        import traceback
+        print(f"Full traceback: {traceback.format_exc()}")
         return jsonify({'error': 'Error calculating progress'}), 500
 
 # --- Pronunciation Check Endpoint ---
@@ -3754,7 +3621,7 @@ def debug_database_connection():
         
         # Test actual connection
         try:
-            from database_config import get_db_connection as get_configured_connection
+            from database_config import get_db_connection, safe_dict_get, execute_safe_query, safe_function_call, get_safe_db_connection as get_configured_connection
             conn, db_type = get_configured_connection()
             debug_info['connection_test'] = f'SUCCESS - {db_type}'
             conn.close()
