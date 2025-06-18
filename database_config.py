@@ -592,6 +592,18 @@ class BulletproofConnection:
         """Convert SQLite syntax to PostgreSQL"""
         pg_query = query.replace('?', '%s')
         
+        # Handle INSERT OR IGNORE - Convert to PostgreSQL ON CONFLICT syntax
+        if 'INSERT OR IGNORE' in pg_query:
+            # Extract the table name and columns from the INSERT statement
+            if 'study_list' in pg_query and '(user_id, word' in pg_query:
+                # For study_list table, use unique constraint on user_id + word
+                pg_query = pg_query.replace('INSERT OR IGNORE', 'INSERT')
+                pg_query += ' ON CONFLICT (user_id, word) DO NOTHING'
+            else:
+                # Generic fallback for other tables
+                pg_query = pg_query.replace('INSERT OR IGNORE', 'INSERT')
+                pg_query += ' ON CONFLICT DO NOTHING'
+        
         # Handle INSERT OR REPLACE
         if 'INSERT OR REPLACE' in pg_query:
             pg_query = pg_query.replace('INSERT OR REPLACE', 'INSERT')
@@ -857,3 +869,87 @@ def get_database_type():
             return conn.db_type
     except:
         return 'sqlite'  # Default fallback 
+
+def safe_add_column(table_name, column_name, column_definition):
+    """
+    Safely add a column to a table if it doesn't exist
+    Works for both SQLite and PostgreSQL
+    """
+    try:
+        with get_db_connection() as conn:
+            db_type = conn.db_type
+            
+            # Check if column exists
+            if db_type == 'postgresql':
+                result = conn.execute('''
+                    SELECT column_name 
+                    FROM information_schema.columns 
+                    WHERE table_name = %s AND column_name = %s
+                ''', (table_name, column_name)).fetchone()
+            else:
+                # SQLite - use PRAGMA table_info
+                result = conn.execute(f'PRAGMA table_info({table_name})').fetchall()
+                result = [row for row in result if row['name'] == column_name]
+            
+            if not result:
+                # Column doesn't exist, add it
+                alter_query = f'ALTER TABLE {table_name} ADD COLUMN {column_name} {column_definition}'
+                conn.execute(alter_query)
+                print(f"✅ Added column {column_name} to {table_name}")
+                return True
+            else:
+                print(f"ℹ️ Column {column_name} already exists in {table_name}")
+                return False
+                
+    except Exception as e:
+        print(f"❌ Error adding column {column_name} to {table_name}: {e}")
+        return False
+
+def ensure_achievements_table_columns():
+    """
+    Ensure achievements table has all required columns for compatibility
+    """
+    try:
+        with get_db_connection() as conn:
+            # Add missing columns if they don't exist
+            safe_add_column('achievements', 'achievement_name', 'VARCHAR(255)')
+            safe_add_column('achievements', 'description', 'TEXT')
+            
+            # For existing records without achievement_name/description, populate them
+            conn.execute('''
+                UPDATE achievements 
+                SET achievement_name = achievement_type,
+                    description = 'Achievement: ' || achievement_type
+                WHERE achievement_name IS NULL OR achievement_name = ''
+            ''')
+            
+            print("✅ Achievements table columns ensured")
+    except Exception as e:
+        print(f"❌ Error ensuring achievements table columns: {e}")
+
+def ensure_study_list_table_columns():
+    """
+    Ensure study_list table has all required columns for compatibility
+    """
+    try:
+        with get_db_connection() as conn:
+            # Add language column if it doesn't exist
+            safe_add_column('study_list', 'language', 'VARCHAR(100) DEFAULT \'english\'')
+            
+            # Update existing records to have default language
+            conn.execute('''
+                UPDATE study_list 
+                SET language = 'english'
+                WHERE language IS NULL OR language = ''
+            ''')
+            
+            print("✅ Study list table columns ensured")
+    except Exception as e:
+        print(f"❌ Error ensuring study list table columns: {e}")
+
+def ensure_all_table_compatibility():
+    """
+    Ensure all tables have required columns for database compatibility
+    """
+    ensure_achievements_table_columns()
+    ensure_study_list_table_columns()

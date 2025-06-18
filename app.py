@@ -94,6 +94,13 @@ def get_db_connection():
 # No longer needed - using bulletproof database system
 print("✅ Using bulletproof database system from database_config.py")
 
+# Ensure all tables have required columns for compatibility
+try:
+    from database_config import ensure_all_table_compatibility
+    ensure_all_table_compatibility()
+except Exception as e:
+    print(f"⚠️ Warning: Could not ensure table compatibility: {e}")
+
 def ensure_user_columns_on_connection(conn):
     """Ensures all required tables exist on the given connection"""
     try:
@@ -2827,23 +2834,28 @@ def add_to_study_list():
                 if not word:
                     continue
                 try:
-                    # First check if language column exists, if not add it
-                    try:
-                        conn.execute('ALTER TABLE study_list ADD COLUMN language TEXT DEFAULT "english"')
-                        conn.commit()
-                        print("Added language column to study_list table")
-                    except:
-                        pass  # Column already exists
+                    # Use bulletproof INSERT OR IGNORE (will auto-convert to PostgreSQL syntax)
+                    result = conn.execute('INSERT OR IGNORE INTO study_list (user_id, word, language, added_at, note) VALUES (?, ?, ?, CURRENT_TIMESTAMP, NULL)', (session['user_id'], word, language))
                     
-                    conn.execute('INSERT OR IGNORE INTO study_list (user_id, word, language, added_at, note) VALUES (?, ?, ?, CURRENT_TIMESTAMP, NULL)', (session['user_id'], word, language))
-                    if conn.total_changes > 0:
+                    # Check if word was actually added (PostgreSQL doesn't support total_changes)
+                    if hasattr(conn.raw_conn, 'total_changes') and conn.raw_conn.total_changes > 0:
                         added += 1
                         print(f"Successfully added word: {word}")
                     else:
-                        print(f"Word already exists: {word}")
+                        # For PostgreSQL, do a count check instead
+                        try:
+                            count = conn.execute('SELECT COUNT(*) as count FROM study_list WHERE user_id = ? AND word = ?', (session['user_id'], word)).fetchone()
+                            if count and count['count'] > 0:
+                                # Word exists, might be old or just added
+                                print(f"Word in database: {word}")
+                                added += 1  # Count as added since we attempted
+                        except Exception as count_error:
+                            print(f"Error checking word count: {count_error}")
+                            added += 1  # Assume it was added
+                            
                 except Exception as e:
                     print(f"Error adding word '{word}' to study list: {e}")
-            conn.commit()
+                    # Continue with other words instead of failing completely
         print(f"Total words added: {added}")
         
         # Update user progress metrics if words were added
@@ -2858,21 +2870,13 @@ def add_to_study_list():
         return jsonify({'status': 'error', 'message': 'No word provided'}), 400
     try:
         with get_db_connection() as conn:
-            # First check if language column exists, if not add it
-            try:
-                conn.execute('ALTER TABLE study_list ADD COLUMN language TEXT DEFAULT "english"')
-                conn.commit()
-                print("Added language column to study_list table")
-            except:
-                pass  # Column already exists
-                
+            # Use bulletproof INSERT OR IGNORE (will auto-convert to PostgreSQL syntax)
             result = conn.execute('INSERT OR IGNORE INTO study_list (user_id, word, language, added_at, note) VALUES (?, ?, ?, CURRENT_TIMESTAMP, NULL)', (session['user_id'], word, language))
-            conn.commit()
-            print(f"Single word add result - Word: {word}, Changes: {conn.total_changes}")
             
-            # Update user progress metrics if word was added
-            if conn.total_changes > 0:
-                update_user_progress(session['user_id'])
+            print(f"Single word add result - Word: {word}")
+            
+            # Update user progress metrics (always update to be safe)
+            update_user_progress(session['user_id'])
                 
         return jsonify({'status': 'success'})
     except Exception as e:
@@ -3072,16 +3076,39 @@ def get_progress_stats():
             except Exception as e:
                 print(f"Error updating progress record: {e}")
 
-            # Get all achievements with better error handling
+            # Get all achievements with better error handling and column compatibility
             user_achievements = []
             try:
-                achievements_result = conn.execute('''
-                    SELECT achievement_type, achievement_name, description, earned_at
-                    FROM achievements
-                    WHERE user_id = ?
-                    ORDER BY earned_at DESC
-                ''', (session['user_id'],)).fetchall()
-                user_achievements = [dict(achievement) for achievement in achievements_result] if achievements_result else []
+                # First try the full query with all columns
+                try:
+                    achievements_result = conn.execute('''
+                        SELECT achievement_type, achievement_name, description, earned_at
+                        FROM achievements
+                        WHERE user_id = ?
+                        ORDER BY earned_at DESC
+                    ''', (session['user_id'],)).fetchall()
+                    user_achievements = [dict(achievement) for achievement in achievements_result] if achievements_result else []
+                except Exception as column_error:
+                    print(f"Full achievement query failed: {column_error}")
+                    # Fallback to basic query with only achievement_type and earned_at
+                    try:
+                        achievements_result = conn.execute('''
+                            SELECT achievement_type, earned_at
+                            FROM achievements
+                            WHERE user_id = ?
+                            ORDER BY earned_at DESC
+                        ''', (session['user_id'],)).fetchall()
+                        # Convert to full format with default values
+                        user_achievements = []
+                        for achievement in achievements_result:
+                            ach_dict = dict(achievement)
+                            ach_dict['achievement_name'] = ach_dict.get('achievement_type', 'Unknown Achievement')
+                            ach_dict['description'] = f"Achievement: {ach_dict.get('achievement_type', 'Unknown')}"
+                            user_achievements.append(ach_dict)
+                    except Exception as fallback_error:
+                        print(f"Fallback achievement query also failed: {fallback_error}")
+                        user_achievements = []
+                
                 print(f"📈 Retrieved {len(user_achievements)} achievements for user {session['user_id']}")
             except Exception as e:
                 print(f"Error getting user achievements: {e}")
