@@ -2448,6 +2448,8 @@ def admin_import_questions():
             # CRITICAL: Verify we're using the correct database in production
             db_type = getattr(conn, 'db_type', 'unknown')
             print(f"🔍 IMPORT SAFETY CHECK: Using {db_type} database")
+            print(f"🔍 IMPORT: Admin user ID: {session.get('admin_user_id', 'Unknown')}")
+            print(f"🔍 IMPORT: Current session keys: {list(session.keys())}")
             
             # In production, ensure we're using PostgreSQL
             if os.getenv('DATABASE_URL') and db_type != 'postgresql':
@@ -2817,9 +2819,40 @@ def admin_import_questions():
             questions_final = conn.execute("SELECT COUNT(*) as count FROM quiz_questions").fetchone()['count']
             print(f"📊 Questions after final commit: {questions_final}")
             
+            # CRITICAL FIX: Clear any cached connection state and force clean connection pool
+            print("🔄 Clearing connection state after import...")
+            
+            # Explicitly close the connection to ensure clean state
+            try:
+                if hasattr(conn, 'close'):
+                    conn.close()
+                    print("🔌 Explicitly closed import connection")
+            except Exception as close_error:
+                print(f"⚠️ Error closing connection: {close_error}")
+            
         print(f"✅ IMPORT COMPLETED: {inserted} questions successfully processed")
+        
+        # CRITICAL FIX: Force garbage collection and clean up any cached connections
+        import gc
+        gc.collect()
+        print("🧹 Cleaned up connections after import")
+        
+        # CRITICAL FIX: Add small delay for PostgreSQL consistency after bulk operations
+        import time
+        time.sleep(0.5)  # Give PostgreSQL time to fully sync after bulk import
+        print("⏱️ Applied post-import consistency delay")
+        
+        # CRITICAL FIX: Verify database state after import with fresh connection
+        try:
+            with get_db_connection() as verify_conn:
+                final_count = verify_conn.execute("SELECT COUNT(*) as count FROM quiz_questions").fetchone()['count']
+                print(f"🔍 POST-IMPORT VERIFICATION: Total questions now: {final_count}")
+        except Exception as verify_error:
+            print(f"⚠️ Post-import verification failed: {verify_error}")
+        
         flash(f'{inserted} questions imported successfully!', 'success')
     except Exception as e:
+        print(f"❌ Import error: {e}")
         flash(f'Error importing questions: {str(e)}', 'danger')
     return redirect(url_for('admin_dashboard'))
 
@@ -2953,8 +2986,6 @@ def get_study_list():
     if 'user_id' not in session:
         return jsonify([])
     
-    # Critical: Check database consistency before any user data operations
-    check_database_consistency()
     with get_db_connection() as conn:
         rows = conn.execute('SELECT word, added_at, note, language FROM study_list WHERE user_id = ? ORDER BY added_at DESC', (session['user_id'],)).fetchall()
     # Always return note and language, even if None
@@ -3067,13 +3098,6 @@ def remove_from_study_list():
 def get_progress_stats():
     if 'user_id' not in session:
         return jsonify({'error': 'Not logged in'}), 401
-
-    # Ensure table compatibility for this worker (in case of worker restart)
-    try:
-        from database_config import ensure_all_table_compatibility
-        ensure_all_table_compatibility()
-    except Exception as compat_error:
-        print(f"⚠️ Warning: Could not ensure table compatibility in progress stats: {compat_error}")
 
     try:
         with get_db_connection() as conn:
