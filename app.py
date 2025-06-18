@@ -19,14 +19,9 @@ from random import sample, shuffle
 from functools import wraps
 import time
 
-# Apply universal database fix - eliminates ALL conn.execute issues
-try:
-    import database_fix
-    print("🔧 Universal database fix loaded")
-except ImportError as e:
-    print(f"⚠️ Could not load database fix: {e}")
-except Exception as e:
-    print(f"⚠️ Error loading database fix: {e}")
+# Apply universal database fix - eliminated in favor of database_config.py
+# Database connection is now handled by bulletproof system in database_config.py
+print("🔧 Using bulletproof database system from database_config.py")
 
 # Third-party imports
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_file, send_from_directory
@@ -39,6 +34,17 @@ import io
 import csv
 import difflib
 import mimetypes
+
+# Optional imports with error handling
+# psutil is used for memory monitoring in development/debugging
+PSUTIL_AVAILABLE = False
+psutil = None
+try:
+    import psutil  # type: ignore
+    PSUTIL_AVAILABLE = True
+except ImportError:
+    # psutil is optional - memory monitoring will be disabled if not available
+    pass
 
 # Environment variable support
 try:
@@ -1417,7 +1423,9 @@ def chat():
                 conn.commit()  # Commit immediately to release the lock
                 
         # If image is present, use Gemini Vision
+        has_image = False  # Initialize has_image flag
         if image_file and allowed_file(image_file.filename):
+            has_image = True  # Set flag when image is being processed
             print(f"Processing image file: {image_file.filename}")
             filename = secure_filename(image_file.filename)
             
@@ -3895,8 +3903,11 @@ _blip_model = None
 def monitor_memory(stage_name):
     """Monitor memory usage for debugging on Render free tier"""
     try:
-        import psutil
-        process = psutil.Process()
+        if not PSUTIL_AVAILABLE or psutil is None:
+            print(f"📊 Memory monitoring not available (psutil not installed)")
+            return
+            
+        process = psutil.Process()  # type: ignore
         memory_info = process.memory_info()
         memory_mb = memory_info.rss / 1024 / 1024
         print(f"🧠 Memory usage at {stage_name}: {memory_mb:.1f} MB")
@@ -3905,8 +3916,6 @@ def monitor_memory(stage_name):
         if memory_mb > 400:
             print(f"⚠️ High memory usage detected: {memory_mb:.1f} MB")
             
-    except ImportError:
-        print(f"📊 Memory monitoring not available (psutil not installed)")
     except Exception as e:
         print(f"❌ Memory monitoring error: {e}")
 
