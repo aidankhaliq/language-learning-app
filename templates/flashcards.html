@@ -49,6 +49,11 @@
             gap: 2rem;
             margin: 2rem 0 1.5rem 0;
         }
+        .controls-bar label {
+            color: #7fc9ff; /* Bright light blue color for better visibility */
+            font-weight: 500; /* Slightly bolder text */
+            font-size: 1.1rem; /* Slightly larger text */
+        }
         .selector {
             background: #23272f;
             color: #fff;
@@ -67,8 +72,8 @@
         }
         .flashcard {
             width: 370px;
-            min-height: 240px;
-            max-height: 400px; /* Prevent cards from becoming too tall */
+            min-height: 300px; /* Increased minimum height */
+            max-height: 750px; /* Dramatically increased from 600px */
             background: #23272f;
             border-radius: 22px;
             box-shadow: 0 8px 32px rgba(0,0,0,0.35);
@@ -92,8 +97,8 @@
         }
         .flashcard-inner {
             width: 100%;
-            min-height: 240px;
-            max-height: 400px; /* Match parent max-height */
+            min-height: 300px; /* Increased to match parent */
+            max-height: 750px; /* Match parent max-height */
             position: absolute;
             top: 0; left: 0;
             display: flex;
@@ -104,8 +109,11 @@
             transition: transform 0.6s cubic-bezier(.4,2,.6,1);
             background: inherit;
             backface-visibility: hidden;
-            padding: 1.5rem 1.2rem;
+            padding: 1.5rem 1.2rem 8rem 1.2rem; /* Dramatically increased bottom padding to 8rem */
             overflow-y: auto; /* Allow scrolling if content is too long */
+            overflow-x: hidden; /* Prevent horizontal scrolling */
+            box-sizing: border-box; /* Include padding in height calculations */
+            scroll-behavior: smooth; /* Smooth scrolling */
         }
         .flashcard.flipped .flashcard-inner.front {
             transform: rotateY(180deg);
@@ -117,46 +125,73 @@
             transform: rotateY(180deg);
             background: #4a90e2;
             color: #fff;
+            padding: 1.5rem 1.2rem 4rem 1.2rem; /* Increased bottom padding for answer side */
         }
         .flashcard-inner.front {
             background: #23272f;
         }
         .flashcard-question {
             color: #fff;
-            font-size: 1.22rem;
+            font-size: 1.05rem; /* Slightly reduced to fit more content */
             font-weight: 700;
             margin-bottom: 1rem;
             text-shadow: 0 2px 8px #000, 0 0 2px #4a90e2;
             letter-spacing: 0.2px;
+            word-wrap: break-word; /* Ensure long words break */
+            overflow-wrap: break-word; /* Modern browsers */
+            hyphens: auto; /* Add hyphens for better word breaking */
+            line-height: 1.4; /* Improved line spacing */
+            text-align: center;
+            width: 100%;
+            max-width: 100%;
+            flex-shrink: 0; /* Prevent shrinking */
         }
         .options-list {
-            margin: 1.2rem 0 0 0;
+            margin: 1.2rem 0 3rem 0; /* Increased bottom margin for more scroll space */
             padding: 0;
             list-style: none;
             display: flex;
             flex-direction: column;
-            gap: 0.7rem;
+            gap: 0.9rem; /* Slightly increased gap between options */
+            width: 100%;
+            max-width: 100%;
+            flex-grow: 1; /* Allow to grow to fill available space */
         }
         .option {
             background: #313543;
             border-radius: 8px;
             padding: 0.7rem 1.2rem;
             color: #7fc9ff;
-            font-size: 1.08rem;
+            font-size: 1rem; /* Slightly reduced to fit more content */
             border: 1.5px solid #4a90e2;
             transition: background 0.2s, color 0.2s;
             cursor: pointer;
-            text-align: left;
+            text-align: center; /* Center align options for better appearance */
+            word-wrap: break-word; /* Ensure long words break */
+            overflow-wrap: break-word; /* Modern browsers */
+            hyphens: auto; /* Add hyphens for better word breaking */
+            line-height: 1.3; /* Improved line spacing */
+            min-height: 40px; /* Minimum height for consistency */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            box-sizing: border-box; /* Include padding and border in width */
+            flex-shrink: 0; /* Prevent shrinking */
+            margin-bottom: 0.6rem; /* Increased spacing between options */
         }
         .option.selected {
             background: #4a90e2;
             color: #fff;
         }
         .type-label {
-            font-size: 0.95rem;
+            font-size: 0.9rem; /* Slightly reduced from 0.95rem */
             color: #7fc9ff;
             margin-bottom: 0.5rem;
             letter-spacing: 0.5px;
+            text-align: center;
+            width: 100%;
+            flex-shrink: 0; /* Prevent shrinking */
         }
         .footer {
             margin-top: 2rem;
@@ -175,12 +210,31 @@
                 width: 95vw;
                 min-width: 0;
                 max-width: 98vw;
-                min-height: 200px;
+                min-height: 280px; /* Increased minimum height for mobile */
+                max-height: 800px; /* Dramatically increased for mobile */
                 padding: 1.2rem 0.7rem;
             }
             .flashcard-inner {
-                min-height: 200px;
-                padding: 1.2rem 0.7rem;
+                min-height: 280px; /* Increased for mobile */
+                max-height: 800px; /* Increased for mobile */
+                padding: 1.2rem 0.7rem 8rem 0.7rem; /* Increased bottom padding to match desktop */
+            }
+            .flashcard-inner.back {
+                padding: 1.2rem 0.7rem 5rem 0.7rem; /* Increased bottom padding for answer side */
+            }
+            .flashcard-question {
+                font-size: 0.95rem; /* Reduced for mobile to fit more content */
+                line-height: 1.3;
+            }
+            .option {
+                font-size: 0.9rem; /* Reduced for mobile to fit more content */
+                padding: 0.6rem 0.8rem;
+                min-height: 36px;
+                margin-bottom: 0.6rem; /* Increased spacing on mobile */
+            }
+            .options-list {
+                margin: 1rem 0 4rem 0; /* Significantly increased bottom margin */
+                gap: 0.9rem; /* Consistent gap with desktop */
             }
         }
         @media (max-width: 600px) {
@@ -188,19 +242,35 @@
                 width: 99vw;
                 min-width: 0;
                 max-width: 99vw;
-                min-height: 160px;
+                min-height: 250px; /* Increased minimum height */
+                max-height: 850px; /* Dramatically increased for small mobile */
                 padding: 0.7rem 0.2rem;
             }
             .flashcard-inner {
-                min-height: 160px;
-                padding: 0.7rem 0.2rem;
+                min-height: 250px; /* Increased */
+                max-height: 850px; /* Increased for small mobile */
+                padding: 0.7rem 0.2rem 9rem 0.2rem; /* Extra large bottom padding for small screens */
+            }
+            .flashcard-inner.back {
+                padding: 0.7rem 0.2rem 5rem 0.2rem; /* Increased bottom padding for answer side */
             }
             .flashcard-question {
-                font-size: 1.05rem;
+                font-size: 0.9rem; /* Further reduced for small mobile */
+                line-height: 1.3;
+                margin-bottom: 0.8rem;
             }
             .option {
-                font-size: 0.98rem;
-                padding: 0.5rem 0.7rem;
+                font-size: 0.85rem; /* Reduced for small mobile to fit more content */
+                padding: 0.5rem 0.6rem;
+                min-height: 34px;
+                margin-bottom: 0.7rem; /* More spacing on small mobile */
+            }
+            .options-list {
+                margin: 0.8rem 0 5rem 0; /* Extra large bottom margin for small screens */
+                gap: 0.9rem; /* Consistent gap */
+            }
+            .type-label {
+                font-size: 0.8rem; /* Slightly reduced */
             }
         }
     </style>
@@ -685,7 +755,7 @@
                     { question: "facile", answer: "difficile" },
                     { question: "grand", answer: "pequeno" },
                     { question: "nouveau", answer: "vieux" },
-                    { question: "chaud", answer: "froid" },
+                    { question: "chaud", answer: "frio" },
                     { question: "dur", answer: "mou" },
                     { question: "propre", answer: "sale" },
                     { question: "près", answer: "longe" }
