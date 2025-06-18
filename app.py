@@ -1421,6 +1421,12 @@ def chat():
             print(f"Processing image file: {image_file.filename}")
             filename = secure_filename(image_file.filename)
             
+            # Monitor memory before processing
+            monitor_memory("before_image_processing")
+            
+            # Apply Render free tier optimizations
+            optimizations = optimize_for_render_free_tier()
+            
             # Ensure upload directory exists
             upload_dir = app.config['UPLOAD_FOLDER']
             os.makedirs(upload_dir, exist_ok=True)
@@ -1429,6 +1435,7 @@ def chat():
             try:
                 image_file.save(file_path)
                 print(f"Image saved to {file_path}")
+                monitor_memory("after_image_save")
             except Exception as e:
                 print(f"Error saving image: {e}")
                 return jsonify({'error': 'Failed to save the uploaded image.'}), 500
@@ -1455,9 +1462,23 @@ Response:
                     response_text = f'[API key not configured. Please set GEMINI_API_KEY environment variable.]\n[API key not configured. Please set GEMINI_API_KEY environment variable.]'
                 else:
                     print(f"Using Gemini API key: {API_KEY[:20]}...")
-                    # Load image using PIL for Gemini Vision
+                    # Load and optimize image for Gemini Vision (resize large images to prevent memory issues)
                     pil_image = PIL.Image.open(file_path)
-                    print(f"Image loaded successfully: {pil_image.size}")
+                    print(f"Original image size: {pil_image.size}")
+                    
+                    # Resize if image is too large (to prevent memory issues on Render free tier)
+                    max_size = optimizations.get('max_image_size', (800, 800))
+                    if pil_image.size[0] > max_size[0] or pil_image.size[1] > max_size[1]:
+                        pil_image.thumbnail(max_size, PIL.Image.Resampling.LANCZOS)
+                        print(f"Resized image to: {pil_image.size}")
+                        monitor_memory("after_gemini_resize")
+                    
+                    # Convert to RGB if necessary (removes alpha channel which can cause issues)
+                    if pil_image.mode != 'RGB':
+                        pil_image = pil_image.convert('RGB')
+                        print(f"Converted image to RGB mode")
+                    
+                    print(f"Processing optimized image: {pil_image.size}")
                     response = vision_model.generate_content([prompt, pil_image])
                     if response and hasattr(response, 'text') and response.text.strip():
                         response_text = response.text.strip()
@@ -1465,6 +1486,12 @@ Response:
                     else:
                         print("Empty or invalid response from Gemini Vision API")
                         gemini_failed = True
+                    
+                    # Clean up memory immediately after Gemini processing
+                    del pil_image
+                    import gc
+                    gc.collect()
+                    monitor_memory("after_gemini_cleanup")
             except ImportError as ie:
                 print(f"Import error in Gemini Vision: {str(ie)}")
                 gemini_failed = True
@@ -1485,10 +1512,24 @@ Response:
                     
                     print("Processing image with BLIP...")
                     raw_image = Image.open(file_path).convert('RGB')
+                    
+                    # Resize image for BLIP to prevent memory issues
+                    blip_max_size = (400, 400)  # Even smaller for BLIP on free tier
+                    if raw_image.size[0] > blip_max_size[0] or raw_image.size[1] > blip_max_size[1]:
+                        raw_image.thumbnail(blip_max_size, Image.Resampling.LANCZOS)
+                        print(f"Resized image for BLIP to: {raw_image.size}")
+                        monitor_memory("after_blip_resize")
+                    
                     inputs = processor(raw_image, return_tensors="pt")
                     out = blip_model.generate(**inputs)
                     caption = processor.decode(out[0], skip_special_tokens=True)
                     print(f"BLIP caption: {caption}")
+                    
+                    # Clean up memory immediately after BLIP processing
+                    del raw_image, inputs, out
+                    import gc
+                    gc.collect()
+                    monitor_memory("after_blip_cleanup")
                     
                     # Now translate the caption using Gemini text model
                     translation_prompt = f"Translate the following image description into {language}, then provide the English translation on a new line.\nDescription: {caption}\n\nFormat:\n[Response in {language}]\n[English translation]\n\nResponse:"
@@ -1562,6 +1603,15 @@ Response:
                 VALUES (?, ?, ?)
             ''', (session_id, message, response_text))
             conn.commit()
+        
+        # Clean up uploaded image file to save disk space (optional)
+        if has_image and 'file_path' in locals():
+            try:
+                import os
+                os.remove(file_path)
+                print(f"Cleaned up uploaded file: {file_path}")
+            except Exception as cleanup_error:
+                print(f"Could not clean up file {file_path}: {cleanup_error}")
         
         # Note: Progress metrics will be updated by the progress stats endpoint when user views dashboard/chatbot
         
@@ -2924,6 +2974,13 @@ def get_progress_stats():
     if 'user_id' not in session:
         return jsonify({'error': 'Not logged in'}), 401
 
+    # Ensure table compatibility for this worker (in case of worker restart)
+    try:
+        from database_config import ensure_all_table_compatibility
+        ensure_all_table_compatibility()
+    except Exception as compat_error:
+        print(f"⚠️ Warning: Could not ensure table compatibility in progress stats: {compat_error}")
+
     try:
         with get_db_connection() as conn:
             print(f"📊 Getting progress stats for user {session['user_id']}")
@@ -3835,6 +3892,44 @@ print("✅ Database initialization handled by connection setup")
 _blip_processor = None
 _blip_model = None
 
+def monitor_memory(stage_name):
+    """Monitor memory usage for debugging on Render free tier"""
+    try:
+        import psutil
+        process = psutil.Process()
+        memory_info = process.memory_info()
+        memory_mb = memory_info.rss / 1024 / 1024
+        print(f"🧠 Memory usage at {stage_name}: {memory_mb:.1f} MB")
+        
+        # Warn if approaching Render free tier limits (~512MB)
+        if memory_mb > 400:
+            print(f"⚠️ High memory usage detected: {memory_mb:.1f} MB")
+            
+    except ImportError:
+        print(f"📊 Memory monitoring not available (psutil not installed)")
+    except Exception as e:
+        print(f"❌ Memory monitoring error: {e}")
+
+def optimize_for_render_free_tier():
+    """Apply memory optimizations for Render's free tier"""
+    try:
+        import gc
+        gc.collect()  # Force garbage collection
+        
+        # Set lower limits for image processing
+        return {
+            'max_image_size': (512, 512),  # Smaller images for free tier
+            'cleanup_files': True,         # Always cleanup uploaded files
+            'aggressive_gc': True          # More frequent garbage collection
+        }
+    except Exception as e:
+        print(f"Error applying optimizations: {e}")
+        return {
+            'max_image_size': (800, 800),
+            'cleanup_files': False,
+            'aggressive_gc': False
+        }
+
 def get_cached_blip_models():
     """Load and cache BLIP models to avoid reloading on each request"""
     global _blip_processor, _blip_model
@@ -3843,11 +3938,26 @@ def get_cached_blip_models():
         try:
             from transformers import BlipProcessor, BlipForConditionalGeneration
             print("Loading BLIP models (this may take a moment on first use)...")
-            _blip_processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
-            _blip_model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
+            
+            # Use a smaller, more memory-efficient model for Render free tier
+            model_name = "Salesforce/blip-image-captioning-base"
+            _blip_processor = BlipProcessor.from_pretrained(model_name)
+            _blip_model = BlipForConditionalGeneration.from_pretrained(model_name)
+            
+            # Move model to eval mode to save memory
+            _blip_model.eval()
+            
             print("BLIP models loaded and cached successfully")
+            
+            # Force garbage collection after model loading
+            import gc
+            gc.collect()
+            
         except Exception as e:
             print(f"Error loading BLIP models: {e}")
+            # Don't cache failed models
+            _blip_processor = None
+            _blip_model = None
             raise e
     
     return _blip_processor, _blip_model
