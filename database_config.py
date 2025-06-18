@@ -153,6 +153,7 @@ def create_postgresql_tables(conn):
                 location TEXT,
                 website TEXT,
                 avatar TEXT,
+                profile_picture_base64 TEXT,
                 timezone TEXT,
                 datetime_format TEXT
             )
@@ -959,9 +960,23 @@ def ensure_study_list_table_columns():
     except Exception as e:
         print(f"❌ Error ensuring study list table columns: {e}")
 
+def ensure_user_profile_columns():
+    """
+    Ensure users table has all required profile columns for compatibility
+    """
+    try:
+        with get_db_connection() as conn:
+            # Add profile_picture_base64 column if it doesn't exist
+            safe_add_column('users', 'profile_picture_base64', 'TEXT')
+            
+            print("✅ User profile table columns ensured")
+    except Exception as e:
+        print(f"❌ Error ensuring user profile table columns: {e}")
+
 def ensure_all_table_compatibility():
     """
     Ensure all tables have required columns for database compatibility
     """
     ensure_achievements_table_columns()
     ensure_study_list_table_columns()
+    ensure_user_profile_columns()
