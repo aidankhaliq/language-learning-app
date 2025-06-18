@@ -70,15 +70,27 @@ def get_db_connection():
                 return get_sqlite_connection()
             except Exception as e:
                 print(f"❌ PostgreSQL connection failed: {e}")
-                print("⚠️ Falling back to SQLite")
-                return get_sqlite_connection()
+                # CRITICAL: DO NOT FALL BACK TO SQLITE IN PRODUCTION!
+                # This causes data to be split between databases
+                if os.getenv('DATABASE_URL'):
+                    print("🚨 CRITICAL: In production environment - PostgreSQL failure is FATAL!")
+                    print("🚨 Data would be lost if we fall back to SQLite!")
+                    raise Exception(f"Production PostgreSQL connection failed: {e}")
+                else:
+                    print("⚠️ Development mode: Falling back to SQLite")
+                    return get_sqlite_connection()
         else:
             return get_sqlite_connection()
             
     except Exception as e:
         print(f"❌ Database configuration error: {e}")
-        print("⚠️ Falling back to SQLite with default settings")
-        return get_sqlite_connection()
+        # CRITICAL: DO NOT FALL BACK TO SQLITE IN PRODUCTION!
+        if os.getenv('DATABASE_URL'):
+            print("🚨 CRITICAL: In production environment - Database failure is FATAL!")
+            raise Exception(f"Production database configuration failed: {e}")
+        else:
+            print("⚠️ Development mode: Falling back to SQLite")
+            return get_sqlite_connection()
 
 def get_sqlite_connection():
     """Get SQLite connection with bulletproof wrapper"""

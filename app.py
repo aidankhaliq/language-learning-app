@@ -764,6 +764,9 @@ def settings():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     
+    # Critical: Check database consistency before any user data operations
+    check_database_consistency()
+    
     with get_db_connection() as conn:
         user = conn.execute("SELECT * FROM users WHERE id = ?", (session['user_id'],)).fetchone()
         
@@ -2442,6 +2445,17 @@ def admin_import_questions():
         print(f"🔍 IMPORTING QUESTIONS: Language={language}, Difficulty={difficulty}, Type={question_type}")
         
         with get_db_connection() as conn:
+            # CRITICAL: Verify we're using the correct database in production
+            db_type = getattr(conn, 'db_type', 'unknown')
+            print(f"🔍 IMPORT SAFETY CHECK: Using {db_type} database")
+            
+            # In production, ensure we're using PostgreSQL
+            if os.getenv('DATABASE_URL') and db_type != 'postgresql':
+                error_msg = f"🚨 CRITICAL SAFETY VIOLATION: Production should use PostgreSQL, but using {db_type}!"
+                print(error_msg)
+                flash(error_msg, 'danger')
+                return redirect(url_for('admin_dashboard'))
+            
             # Check questions before import
             questions_before = conn.execute("SELECT COUNT(*) as count FROM quiz_questions").fetchone()['count']
             print(f"📊 Questions in database before import: {questions_before}")
@@ -2938,6 +2952,9 @@ def admin_edit_question():
 def get_study_list():
     if 'user_id' not in session:
         return jsonify([])
+    
+    # Critical: Check database consistency before any user data operations
+    check_database_consistency()
     with get_db_connection() as conn:
         rows = conn.execute('SELECT word, added_at, note, language FROM study_list WHERE user_id = ? ORDER BY added_at DESC', (session['user_id'],)).fetchall()
     # Always return note and language, even if None
@@ -4066,6 +4083,89 @@ def get_simple_image_description(file_path):
             return description
     except Exception as e:
         return f"An image file was uploaded, but detailed analysis is currently unavailable. Error: {str(e)}"
+
+@app.route('/debug/database/critical', methods=['GET'])
+def debug_database_critical():
+    """Critical debug endpoint to identify database switching issues"""
+    try:
+        results = {
+            'timestamp': datetime.now().isoformat(),
+            'environment': {
+                'DATABASE_URL_exists': 'DATABASE_URL' in os.environ,
+                'DATABASE_URL_preview': os.getenv('DATABASE_URL', 'NOT SET')[:30] + '...' if os.getenv('DATABASE_URL') else 'NOT SET'
+            },
+            'database_checks': []
+        }
+        
+        # Test multiple database connections to see if they're consistent
+        for i in range(3):
+            try:
+                with get_db_connection() as conn:
+                    db_type = getattr(conn, 'db_type', 'unknown')
+                    
+                    # Check user data
+                    user_count = conn.execute("SELECT COUNT(*) as count FROM users").fetchone()['count']
+                    question_count = conn.execute("SELECT COUNT(*) as count FROM quiz_questions").fetchone()['count']
+                    study_list_count = conn.execute("SELECT COUNT(*) as count FROM study_list").fetchone()['count']
+                    
+                    # Get specific user data if session exists
+                    user_data = None
+                    if session.get('user_id'):
+                        user = conn.execute("SELECT avatar, name, email FROM users WHERE id = ?", (session['user_id'],)).fetchone()
+                        user_study_count = conn.execute("SELECT COUNT(*) as count FROM study_list WHERE user_id = ?", (session['user_id'],)).fetchone()['count']
+                        user_data = {
+                            'avatar': user['avatar'] if user else None,
+                            'name': user['name'] if user else None,
+                            'email': user['email'] if user else None,
+                            'study_list_count': user_study_count
+                        }
+                    
+                    results['database_checks'].append({
+                        'connection_attempt': i + 1,
+                        'db_type': db_type,
+                        'total_users': user_count,
+                        'total_questions': question_count,
+                        'total_study_items': study_list_count,
+                        'current_user_data': user_data
+                    })
+                    
+            except Exception as e:
+                results['database_checks'].append({
+                    'connection_attempt': i + 1,
+                    'error': str(e)
+                })
+        
+        return jsonify(results)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+def check_database_consistency():
+    """
+    Critical function to ensure database consistency and prevent data loss
+    """
+    try:
+        with get_db_connection() as conn:
+            db_type = getattr(conn, 'db_type', 'unknown')
+            
+            # Log current database type
+            print(f"🔍 Database consistency check: Using {db_type}")
+            
+            # In production with DATABASE_URL, must use PostgreSQL
+            if os.getenv('DATABASE_URL'):
+                if db_type != 'postgresql':
+                    error_msg = f"🚨 CRITICAL: Production environment but using {db_type} instead of PostgreSQL!"
+                    print(error_msg)
+                    raise Exception(error_msg)
+                else:
+                    print("✅ Production database check passed: Using PostgreSQL")
+            else:
+                print(f"ℹ️ Development environment: Using {db_type}")
+            
+            return db_type
+    except Exception as e:
+        print(f"❌ Database consistency check failed: {e}")
+        raise
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
