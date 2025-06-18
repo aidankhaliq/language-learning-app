@@ -139,6 +139,15 @@ def ensure_user_columns_on_connection(conn):
             )
         ''')
         
+        # Ensure quiz_results table has percentage column
+        try:
+            conn.execute('ALTER TABLE quiz_results ADD COLUMN percentage REAL DEFAULT 0')
+            conn.commit()
+            print("✅ Added 'percentage' column to quiz_results table")
+        except Exception:
+            # Column likely already exists
+            pass
+        
         conn.commit()
     except Exception as e:
         print(f"Error creating additional tables: {e}")
@@ -1615,7 +1624,6 @@ Response:
         # Clean up uploaded image file to save disk space (optional)
         if has_image and 'file_path' in locals():
             try:
-                import os
                 os.remove(file_path)
                 print(f"Cleaned up uploaded file: {file_path}")
             except Exception as cleanup_error:
@@ -1966,9 +1974,10 @@ def quiz_questions():
             (user_id, language, difficulty, correct, total, (correct/total)*100, int(correct==total), datetime.now(), json.dumps(review), points, 5 if streak > 1 else 0, 5 if time_taken < 60 else 0)
         )
         # --- Add this block to also insert into legacy quiz_results for progress tracking ---
+        percentage = (correct/total)*100
         conn.execute(
-            "INSERT INTO quiz_results (user_id, language, difficulty, score, total, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
-            (user_id, language, difficulty_cap, correct, total, datetime.now())
+            "INSERT INTO quiz_results (user_id, language, difficulty, score, total, percentage, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (user_id, language, difficulty_cap, correct, total, percentage, datetime.now())
         )
         conn.commit()
         
