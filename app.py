@@ -100,10 +100,36 @@ def get_db_connection():
 # No longer needed - using bulletproof database system
 print("✅ Using bulletproof database system from database_config.py")
 
-# Ensure all tables have required columns for compatibility
+        # Ensure all tables have required columns for compatibility
 try:
     from database_config import ensure_all_table_compatibility
     ensure_all_table_compatibility()
+    
+    # Ensure avatar and other profile columns exist
+    with get_db_connection() as conn:
+        try:
+            # Check if avatar column exists, if not add it
+            conn.execute("ALTER TABLE users ADD COLUMN avatar TEXT")
+            conn.commit()
+            print("✅ Added 'avatar' column to users table")
+        except Exception:
+            # Column likely already exists
+            pass
+            
+        try:
+            # Ensure other missing profile columns exist
+            conn.execute("ALTER TABLE users ADD COLUMN name TEXT")
+            conn.execute("ALTER TABLE users ADD COLUMN phone TEXT") 
+            conn.execute("ALTER TABLE users ADD COLUMN location TEXT")
+            conn.execute("ALTER TABLE users ADD COLUMN website TEXT")
+            conn.execute("ALTER TABLE users ADD COLUMN timezone TEXT")
+            conn.execute("ALTER TABLE users ADD COLUMN datetime_format TEXT")
+            conn.commit()
+            print("✅ Ensured all profile columns exist")
+        except Exception:
+            # Columns likely already exist
+            pass
+            
 except Exception as e:
     print(f"⚠️ Warning: Could not ensure table compatibility: {e}")
 
@@ -768,9 +794,16 @@ def settings():
                         """, (name, email, phone, location, website, bio, session['user_id']))
                     
                     conn.commit()
+                    
+                    # Update session data to reflect changes immediately
+                    session['username'] = name if name else session.get('username')
+                    session['email'] = email if email else session.get('email')
+                    
                     flash('Profile updated successfully!', 'success')
+                    print(f"✅ Profile updated for user {session['user_id']}: avatar={selected_avatar}, picture={profile_picture}")
                 except Exception as e:
                     flash(f'Error updating profile: {str(e)}', 'error')
+                    print(f"❌ Profile update error for user {session['user_id']}: {e}")
                     
             elif action == 'change_password':
                 # Handle password change
@@ -3265,13 +3298,14 @@ def get_flashcards(language):
     try:
         with get_db_connection() as conn:
             # Check total questions available
-            total_questions = conn.execute("SELECT COUNT(*) FROM quiz_questions WHERE language = ?", (db_language,)).fetchone()[0]
+            result = conn.execute("SELECT COUNT(*) as count FROM quiz_questions WHERE language = ?", (db_language,)).fetchone()
+            total_questions = result['count'] if result else 0
             print(f"📊 Total questions for {db_language}: {total_questions}")
             
             if total_questions == 0:
                 print(f"⚠️ No questions found for language: {db_language}")
                 available_languages = conn.execute("SELECT DISTINCT language FROM quiz_questions").fetchall()
-                available_langs = [lang[0] for lang in available_languages]
+                available_langs = [lang['language'] for lang in available_languages]
                 print(f"Available languages: {available_langs}")
                 return jsonify({'message': f'No flashcards available for {db_language}. Available languages: {", ".join(available_langs)}'})
             
@@ -3534,9 +3568,9 @@ def health_check():
     try:
         with get_db_connection() as conn:
             # Test database connectivity
-            user_count = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
-            question_count = conn.execute("SELECT COUNT(*) FROM quiz_questions").fetchone()[0]
-            admin_count = conn.execute("SELECT COUNT(*) FROM users WHERE is_admin = 1").fetchone()[0]
+            user_count = conn.execute("SELECT COUNT(*) as count FROM users").fetchone()['count']
+            question_count = conn.execute("SELECT COUNT(*) as count FROM quiz_questions").fetchone()['count']
+            admin_count = conn.execute("SELECT COUNT(*) as count FROM users WHERE is_admin = 1").fetchone()['count']
             
             return jsonify({
                 'status': 'healthy',
@@ -3561,7 +3595,7 @@ def debug_database():
         with get_db_connection() as conn:
             # Get all tables
             tables = conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
-            table_names = [table[0] for table in tables]
+            table_names = [table['name'] for table in tables]
             
             # Get admin users
             admins = conn.execute("SELECT id, username, email, is_admin FROM users WHERE is_admin = 1").fetchall()
@@ -3577,9 +3611,9 @@ def debug_database():
             return jsonify({
                 'tables': table_names,
                 'admins': admin_list,
-                'question_counts': [{'language': lc[0], 'count': lc[1]} for lc in language_counts],
-                'total_questions': conn.execute("SELECT COUNT(*) FROM quiz_questions").fetchone()[0],
-                'total_users': conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+                'question_counts': [{'language': lc['language'], 'count': lc['count']} for lc in language_counts],
+                'total_questions': conn.execute("SELECT COUNT(*) as count FROM quiz_questions").fetchone()['count'],
+                'total_users': conn.execute("SELECT COUNT(*) as count FROM users").fetchone()['count']
             })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -3636,24 +3670,24 @@ def debug_database_detailed():
                 # Get table info for PostgreSQL
                 cursor.execute("SELECT tablename FROM pg_tables WHERE schemaname = 'public'")
                 tables = cursor.fetchall()
-                table_names = [table[0] for table in tables]
+                table_names = [table['tablename'] for table in tables]
                 
                 # Get user count and recent users
-                cursor.execute("SELECT COUNT(*) FROM users")
-                user_count = cursor.fetchone()[0]
+                cursor.execute("SELECT COUNT(*) as count FROM users")
+                user_count = cursor.fetchone()['count']
                 
                 cursor.execute("SELECT id, username, email FROM users ORDER BY id DESC LIMIT 5")
                 recent_users = cursor.fetchall()
-                recent_user_list = [{'id': u[0], 'username': u[1], 'email': u[2]} for u in recent_users]
+                recent_user_list = [{'id': u['id'], 'username': u['username'], 'email': u['email']} for u in recent_users]
                 
                 # Get question counts by language
-                cursor.execute("SELECT language, COUNT(*) FROM quiz_questions GROUP BY language ORDER BY language")
+                cursor.execute("SELECT language, COUNT(*) as count FROM quiz_questions GROUP BY language ORDER BY language")
                 question_counts = cursor.fetchall()
-                question_data = [{'language': q[0], 'count': q[1]} for q in question_counts]
+                question_data = [{'language': q['language'], 'count': q['count']} for q in question_counts]
                 
                 # Total questions
-                cursor.execute("SELECT COUNT(*) FROM quiz_questions")
-                total_questions = cursor.fetchone()[0]
+                cursor.execute("SELECT COUNT(*) as count FROM quiz_questions")
+                total_questions = cursor.fetchone()['count']
                 
             else:
                 # SQLite handling
