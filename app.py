@@ -91,12 +91,8 @@ def get_db_connection():
     from database_config import get_db_connection as get_bulletproof_connection
     return get_bulletproof_connection()
 
-# Apply the database fix patch now that the function is defined
-try:
-    from database_fix import patch_app_after_import
-    patch_app_after_import()
-except Exception as e:
-    print(f"⚠️ Could not apply database patch: {e}")
+# No longer needed - using bulletproof database system
+print("✅ Using bulletproof database system from database_config.py")
 
 def ensure_user_columns_on_connection(conn):
     """Ensures all required tables exist on the given connection"""
@@ -3622,7 +3618,8 @@ def debug_database_connection():
         # Test actual connection
         try:
             from database_config import get_db_connection, safe_dict_get, execute_safe_query, safe_function_call, get_safe_db_connection as get_configured_connection
-            conn, db_type = get_configured_connection()
+            conn = get_configured_connection()
+            db_type = conn.db_type if hasattr(conn, 'db_type') else 'unknown'
             debug_info['connection_test'] = f'SUCCESS - {db_type}'
             conn.close()
         except Exception as e:
