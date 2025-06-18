@@ -3652,20 +3652,44 @@ def close_account():
                 "INSERT INTO account_activity (user_id, activity_type, details) VALUES (?, ?, ?)",
                 (user_id, 'closure', close_reason)
             )
-            # Delete all user-related data (order matters due to FKs)
+            
+            # Delete all user-related data in correct order (foreign key dependencies)
+            # 1. Delete chat messages first (references chat_sessions)
             conn.execute("DELETE FROM chat_messages WHERE session_id IN (SELECT session_id FROM chat_sessions WHERE user_id = ?)", (user_id,))
+            
+            # 2. Delete chat sessions (references users)
             conn.execute("DELETE FROM chat_sessions WHERE user_id = ?", (user_id,))
+            
+            # 3. Delete legacy chat history (references users)
             conn.execute("DELETE FROM chat_history WHERE user_id = ?", (user_id,))
+            
+            # 4. Delete user badges (references users)
+            conn.execute("DELETE FROM user_badges WHERE user_id = ?", (user_id,))
+            
+            # 5. Delete notifications (references users)
             conn.execute("DELETE FROM notifications WHERE user_id = ?", (user_id,))
+            
+            # 6. Delete achievements (references users)
             conn.execute("DELETE FROM achievements WHERE user_id = ?", (user_id,))
+            
+            # 7. Delete user progress (references users)
             conn.execute("DELETE FROM user_progress WHERE user_id = ?", (user_id,))
+            
+            # 8. Delete study list (references users)
             conn.execute("DELETE FROM study_list WHERE user_id = ?", (user_id,))
+            
+            # 9. Delete quiz results (references users)
             conn.execute("DELETE FROM quiz_results WHERE user_id = ?", (user_id,))
             conn.execute("DELETE FROM quiz_results_enhanced WHERE user_id = ?", (user_id,))
-            conn.execute("DELETE FROM account_activity WHERE user_id = ? AND activity_type != 'closure'", (user_id,))
-            # Finally, delete the user
+            
+            # 10. Delete ALL account activity including closure record (references users)
+            conn.execute("DELETE FROM account_activity WHERE user_id = ?", (user_id,))
+            
+            # 11. Finally, delete the user (no more foreign key references)
             conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+            
             conn.commit()
+            
         session.clear()
         flash('Your account and all data have been permanently deleted.', 'success')
         return redirect(url_for('index'))
