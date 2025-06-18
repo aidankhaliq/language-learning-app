@@ -472,7 +472,7 @@
         <button id="closeSidebarBtn" style="position:absolute;top:1.2rem;right:1.2rem;background:none;border:none;color:#fff;font-size:1.5rem;cursor:pointer;z-index:10;">&times;</button>
         <div style="text-align:center;margin-bottom:1.5rem;">
             <img src="{{ url_for('static', filename='MMU LOGO.png') }}" alt="MMU Logo" style="width:90px;margin-bottom:0.5rem;" />
-            <h4 style="margin-bottom:0.2rem;font-size:1.2rem;font-weight:600;">Welcome, {{ session['username'] }}!</h4>
+            <h4 style="margin-bottom:0.2rem;font-size:1.2rem;font-weight:600;">Welcome, {{ username }}!</h4>
             <p style="font-size:0.95rem;color:#bdbdbd;margin-bottom:0.5rem;">Logged in at: {{ session.get('login_time', 'N/A') }}</p>
         </div>
         <ul class="nav flex-column" style="flex:1;padding:0 1rem;">

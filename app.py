@@ -562,7 +562,7 @@ def admin_required(f):
 def index():
     """Home page: show dashboard if logged in, else show landing page"""
     if 'user_id' in session:
-        return render_template('dashboard.html', username=session['username'], is_admin=session.get('is_admin', False))
+        return render_template('dashboard.html', username=session.get('username', 'User'), is_admin=session.get('is_admin', False))
     else:
         return render_template('landing.html')
 
@@ -749,7 +749,7 @@ def dashboard():
         return redirect(url_for('login'))
 
     return render_template('dashboard.html',
-                         username=session['username'],
+                         username=session.get('username', 'User'),
                          is_admin=session.get('is_admin', False))
 
 @app.route('/logout')
@@ -764,8 +764,12 @@ def settings():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     
-    # Critical: Check database consistency before any user data operations
-    check_database_consistency()
+    # Critical: Check database consistency before any user data operations (wrapped in try-catch)
+    try:
+        check_database_consistency()
+    except Exception as e:
+        print(f"⚠️ Database consistency check warning in settings: {e}")
+        # Continue with degraded functionality rather than crashing
     
     with get_db_connection() as conn:
         user = conn.execute("SELECT * FROM users WHERE id = ?", (session['user_id'],)).fetchone()
@@ -3348,7 +3352,7 @@ def check_pronunciation():
 def flashcards():
     if 'username' not in session:
         return redirect(url_for('login'))
-    return render_template('flashcards.html', username=session['username'])
+    return render_template('flashcards.html', username=session.get('username', 'User'))
 
 @app.route('/get_flashcards/<language>')
 def get_flashcards(language):
