@@ -2952,11 +2952,30 @@ def admin_delete_questions():
         ids = data.get('ids')
         if not ids or not isinstance(ids, list):
             return jsonify({'success': False, 'message': 'No question IDs provided'}), 400
+        
+        # Validate that all IDs are integers
+        try:
+            ids = [int(qid) for qid in ids]
+        except (ValueError, TypeError):
+            return jsonify({'success': False, 'message': 'Invalid question ID format'}), 400
+        
         with get_db_connection() as conn:
-            conn.executemany("DELETE FROM quiz_questions WHERE id = ?", [(qid,) for qid in ids])
-            conn.commit()
-        return jsonify({'success': True})
+            # Use a single DELETE with IN clause instead of executemany
+            # This is more efficient and works with both SQLite and PostgreSQL
+            if len(ids) == 1:
+                # Single deletion
+                conn.execute("DELETE FROM quiz_questions WHERE id = ?", (ids[0],))
+            else:
+                # Multiple deletions using IN clause
+                placeholders = ','.join(['?' for _ in ids])
+                query = f"DELETE FROM quiz_questions WHERE id IN ({placeholders})"
+                conn.execute(query, ids)
+            
+        return jsonify({'success': True, 'message': f'Successfully deleted {len(ids)} questions'})
     except Exception as e:
+        print(f"❌ Error deleting questions: {e}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
         return jsonify({'success': False, 'message': f'Error deleting questions: {str(e)}'}), 500
 
 @app.route('/translate', methods=['POST'])
