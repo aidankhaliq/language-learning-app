@@ -105,30 +105,57 @@ try:
     from database_config import ensure_all_table_compatibility
     ensure_all_table_compatibility()
     
-    # Ensure avatar and other profile columns exist
+    # Ensure avatar and other profile columns exist with proper PostgreSQL handling
     with get_db_connection() as conn:
-        try:
-            # Check if avatar column exists, if not add it
-            conn.execute("ALTER TABLE users ADD COLUMN avatar TEXT")
-            conn.commit()
-            print("✅ Added 'avatar' column to users table")
-        except Exception:
-            # Column likely already exists
-            pass
+        # Get database type to handle PostgreSQL vs SQLite differently
+        db_type = getattr(conn, 'db_type', 'sqlite')
+        
+        if db_type == 'postgresql':
+            # PostgreSQL: Check if columns exist before adding them
+            columns_to_add = {
+                'avatar': 'TEXT',
+                'name': 'TEXT', 
+                'phone': 'TEXT',
+                'location': 'TEXT',
+                'website': 'TEXT',
+                'timezone': 'TEXT',
+                'datetime_format': 'TEXT'
+            }
             
-        try:
-            # Ensure other missing profile columns exist
-            conn.execute("ALTER TABLE users ADD COLUMN name TEXT")
-            conn.execute("ALTER TABLE users ADD COLUMN phone TEXT") 
-            conn.execute("ALTER TABLE users ADD COLUMN location TEXT")
-            conn.execute("ALTER TABLE users ADD COLUMN website TEXT")
-            conn.execute("ALTER TABLE users ADD COLUMN timezone TEXT")
-            conn.execute("ALTER TABLE users ADD COLUMN datetime_format TEXT")
-            conn.commit()
-            print("✅ Ensured all profile columns exist")
-        except Exception:
-            # Columns likely already exist
-            pass
+            for column_name, column_type in columns_to_add.items():
+                try:
+                    # Check if column exists in PostgreSQL
+                    result = conn.execute("""
+                        SELECT column_name 
+                        FROM information_schema.columns 
+                        WHERE table_name = 'users' AND column_name = ?
+                    """, (column_name,)).fetchone()
+                    
+                    if not result:
+                        # Column doesn't exist, add it
+                        conn.execute(f"ALTER TABLE users ADD COLUMN {column_name} {column_type}")
+                        conn.commit()
+                        print(f"✅ Added '{column_name}' column to users table")
+                    else:
+                        print(f"ℹ️ Column '{column_name}' already exists in users table")
+                        
+                except Exception as e:
+                    print(f"⚠️ Could not add column '{column_name}': {e}")
+                    # Rollback the failed transaction
+                    conn.rollback()
+                    
+        else:
+            # SQLite: Use simpler approach with try/catch
+            columns_to_add = ['avatar', 'name', 'phone', 'location', 'website', 'timezone', 'datetime_format']
+            
+            for column_name in columns_to_add:
+                try:
+                    conn.execute(f"ALTER TABLE users ADD COLUMN {column_name} TEXT")
+                    conn.commit()
+                    print(f"✅ Added '{column_name}' column to users table")
+                except Exception:
+                    # Column likely already exists
+                    pass
             
 except Exception as e:
     print(f"⚠️ Warning: Could not ensure table compatibility: {e}")
