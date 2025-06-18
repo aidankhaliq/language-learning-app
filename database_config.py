@@ -210,6 +210,19 @@ def create_postgresql_tables(conn):
             )
         ''')
         
+        # Chat history table (legacy - for compatibility)
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS chat_history (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                message TEXT NOT NULL,
+                response TEXT NOT NULL,
+                language VARCHAR(100) NOT NULL,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        ''')
+        
         # Quiz results enhanced table
         conn.execute('''
             CREATE TABLE IF NOT EXISTS quiz_results_enhanced (
@@ -285,6 +298,19 @@ def create_postgresql_tables(conn):
                 description TEXT,
                 earned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users (id)
+            )
+        ''')
+        
+        # User badges table
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS user_badges (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                language VARCHAR(100) NOT NULL,
+                badge_id VARCHAR(100) NOT NULL,
+                earned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id),
+                UNIQUE(user_id, language, badge_id)
             )
         ''')
         
@@ -973,6 +999,70 @@ def ensure_user_profile_columns():
     except Exception as e:
         print(f"❌ Error ensuring user profile table columns: {e}")
 
+def ensure_missing_tables():
+    """
+    Ensure missing tables are created in existing databases for compatibility
+    """
+    try:
+        with get_db_connection() as conn:
+            db_type, _ = get_database_config()
+            
+            if db_type == 'postgresql':
+                # PostgreSQL syntax
+                conn.execute('''
+                    CREATE TABLE IF NOT EXISTS chat_history (
+                        id SERIAL PRIMARY KEY,
+                        user_id INTEGER NOT NULL,
+                        message TEXT NOT NULL,
+                        response TEXT NOT NULL,
+                        language VARCHAR(100) NOT NULL,
+                        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users(id)
+                    )
+                ''')
+                
+                conn.execute('''
+                    CREATE TABLE IF NOT EXISTS user_badges (
+                        id SERIAL PRIMARY KEY,
+                        user_id INTEGER NOT NULL,
+                        language VARCHAR(100) NOT NULL,
+                        badge_id VARCHAR(100) NOT NULL,
+                        earned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users (id),
+                        UNIQUE(user_id, language, badge_id)
+                    )
+                ''')
+            else:
+                # SQLite syntax
+                conn.execute('''
+                    CREATE TABLE IF NOT EXISTS chat_history (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL,
+                        message TEXT NOT NULL,
+                        response TEXT NOT NULL,
+                        language TEXT NOT NULL,
+                        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users(id)
+                    )
+                ''')
+                
+                conn.execute('''
+                    CREATE TABLE IF NOT EXISTS user_badges (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL,
+                        language TEXT NOT NULL,
+                        badge_id TEXT NOT NULL,
+                        earned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users (id),
+                        UNIQUE(user_id, language, badge_id)
+                    )
+                ''')
+            
+            conn.commit()
+            print("✅ Missing tables ensured")
+    except Exception as e:
+        print(f"❌ Error ensuring missing tables: {e}")
+
 def ensure_all_table_compatibility():
     """
     Ensure all tables have required columns for database compatibility
@@ -980,3 +1070,4 @@ def ensure_all_table_compatibility():
     ensure_achievements_table_columns()
     ensure_study_list_table_columns()
     ensure_user_profile_columns()
+    ensure_missing_tables()
