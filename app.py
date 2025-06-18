@@ -550,9 +550,9 @@ def update_user_progress(user_id):
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not session.get('is_admin'):
+        if not session.get('is_admin') or not session.get('admin_user_id'):
             flash('Admin access required.', 'danger')
-            return redirect(url_for('login'))
+            return redirect(url_for('admin_login'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -1001,10 +1001,12 @@ def admin_login():
                 if user['is_admin']:
                     if check_password_hash(user['password'], password):
                         print("✅ Admin login successful")
-                        session['user_id'] = user['id']
-                        session['username'] = user['username']
-                        session['email'] = user['email']
+                        # CRITICAL FIX: Use separate session variables for admin to avoid overwriting user session
+                        session['admin_user_id'] = user['id']
+                        session['admin_username'] = user['username']
+                        session['admin_email'] = user['email']
                         session['is_admin'] = True
+                        print(f"🔧 Admin session created: ID={user['id']}, keeping existing user session intact")
                         return redirect(url_for('admin_dashboard'))
                     else:
                         print("❌ Password check failed")
@@ -1021,8 +1023,8 @@ def admin_login():
 @app.route('/admin_dashboard')
 def admin_dashboard():
     """Displays the admin dashboard"""
-    if not session.get('is_admin'):
-        return redirect(url_for('login'))
+    if not session.get('is_admin') or not session.get('admin_user_id'):
+        return redirect(url_for('admin_login'))
     languages = ['English', 'Chinese', 'Malay', 'Spanish', 'French', 'Portuguese', 'Tamil']
     difficulties = ['beginner', 'intermediate', 'advanced']
     quiz_data = {lang: {diff: [] for diff in difficulties} for lang in languages}
@@ -1177,8 +1179,12 @@ def admin_delete_user(user_id):
 
 @app.route('/admin_logout')
 def admin_logout():
-    """Handles admin logout"""
-    session.clear()
+    """Handles admin logout - only clears admin session, preserves user session"""
+    # CRITICAL FIX: Only clear admin-specific session variables
+    admin_keys_to_remove = ['admin_user_id', 'admin_username', 'admin_email', 'is_admin']
+    for key in admin_keys_to_remove:
+        session.pop(key, None)
+    print("🔓 Admin logged out, user session preserved")
     return redirect(url_for('index'))
 
 @app.route('/chatbot', methods=['GET', 'POST'])
@@ -2449,6 +2455,7 @@ def admin_import_questions():
             db_type = getattr(conn, 'db_type', 'unknown')
             print(f"🔍 IMPORT SAFETY CHECK: Using {db_type} database")
             print(f"🔍 IMPORT: Admin user ID: {session.get('admin_user_id', 'Unknown')}")
+            print(f"🔍 IMPORT: Regular user ID: {session.get('user_id', 'None - preserved')}")
             print(f"🔍 IMPORT: Current session keys: {list(session.keys())}")
             
             # In production, ensure we're using PostgreSQL
