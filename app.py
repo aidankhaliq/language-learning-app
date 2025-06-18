@@ -788,36 +788,60 @@ def settings():
                 selected_avatar = request.form.get('selected_avatar', '').strip()
                 
                 # Handle profile picture upload
-                profile_picture = None
+                profile_picture_base64 = None
                 if 'profile_picture' in request.files:
                     file = request.files['profile_picture']
                     if file and file.filename != '' and allowed_file(file.filename):
-                        import os
-                        import uuid
-                        # Create uploads directory if it doesn't exist
-                        upload_dir = os.path.join('static', 'uploads')
-                        os.makedirs(upload_dir, exist_ok=True)
+                        import base64
+                        from PIL import Image
+                        import io
                         
-                        # Generate unique filename
-                        file_extension = file.filename.rsplit('.', 1)[1].lower()
-                        filename = f"{uuid.uuid4().hex}.{file_extension}"
-                        file.save(os.path.join(upload_dir, filename))
-                        profile_picture = filename
+                        # Read and process the image
+                        try:
+                            # Read the image file
+                            image_data = file.read()
+                            
+                            # Resize image to reasonable size to avoid database bloat
+                            image = Image.open(io.BytesIO(image_data))
+                            
+                            # Convert to RGB if necessary (for PNG with transparency)
+                            if image.mode in ('RGBA', 'LA', 'P'):
+                                # Create a white background for transparency
+                                background = Image.new('RGB', image.size, (255, 255, 255))
+                                if image.mode == 'P':
+                                    image = image.convert('RGBA')
+                                background.paste(image, mask=image.split()[-1] if image.mode == 'RGBA' else None)
+                                image = background
+                            
+                            # Resize to maximum 400x400 to keep reasonable file size
+                            max_size = (400, 400)
+                            image.thumbnail(max_size, Image.Resampling.LANCZOS)
+                            
+                            # Convert to base64
+                            buffer = io.BytesIO()
+                            image.save(buffer, format='JPEG', quality=85, optimize=True)
+                            image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+                            profile_picture_base64 = f"data:image/jpeg;base64,{image_base64}"
+                            
+                        except Exception as e:
+                            flash(f'Error processing image: {str(e)}', 'error')
+                            print(f"❌ Image processing error: {e}")
+                            profile_picture_base64 = None
                 
                 # Update user profile
                 try:
-                    if profile_picture:
+                    if profile_picture_base64:
                         # Clear avatar if uploading new picture
                         conn.execute("""
                             UPDATE users SET name = ?, email = ?, phone = ?, location = ?, 
-                            website = ?, bio = ?, profile_picture = ?, avatar = NULL 
+                            website = ?, bio = ?, profile_picture_base64 = ?, avatar = NULL, profile_picture = NULL 
                             WHERE id = ?
-                        """, (name, email, phone, location, website, bio, profile_picture, session['user_id']))
+                        """, (name, email, phone, location, website, bio, profile_picture_base64, session['user_id']))
                     elif selected_avatar:
                         # Clear profile picture if selecting avatar
                         conn.execute("""
                             UPDATE users SET name = ?, email = ?, phone = ?, location = ?, 
-                            website = ?, bio = ?, avatar = ?, profile_picture = NULL 
+                            website = ?, bio = ?, avatar = ?, profile_picture_base64 = NULL, profile_picture = NULL 
                             WHERE id = ?
                         """, (name, email, phone, location, website, bio, selected_avatar, session['user_id']))
                     else:
@@ -834,7 +858,7 @@ def settings():
                     session['email'] = email if email else session.get('email')
                     
                     flash('Profile updated successfully!', 'success')
-                    print(f"✅ Profile updated for user {session['user_id']}: avatar={selected_avatar}, picture={profile_picture}")
+                    print(f"✅ Profile updated for user {session['user_id']}: avatar={selected_avatar}, base64_picture={bool(profile_picture_base64)}")
                 except Exception as e:
                     flash(f'Error updating profile: {str(e)}', 'error')
                     print(f"❌ Profile update error for user {session['user_id']}: {e}")
@@ -1367,7 +1391,8 @@ def ensure_user_columns():
             return
             
         # Get existing columns
-        existing_columns = [row['name'] for row in conn.execute("PRAGMA table_info(users);")]
+        table_info = conn.execute("PRAGMA table_info(users);").fetchall()
+        existing_columns = [row['name'] for row in table_info]
         
         # Add missing columns to users table
         columns_to_add = [
@@ -1382,6 +1407,7 @@ def ensure_user_columns():
             ('bio', 'TEXT'),
             ('profile_picture', 'TEXT'),
             ('avatar', 'TEXT'),
+            ('profile_picture_base64', 'TEXT'),  # New column for base64 encoded profile pictures
         ]
         
         for col, typ in columns_to_add:

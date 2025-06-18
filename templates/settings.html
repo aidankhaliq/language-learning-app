@@ -60,7 +60,7 @@
     <!-- Sidebar -->
     <aside class="sidebar">
         <img class="profile-pic" id="sidebar-profile-pic"
-             src="{% if user.profile_picture %}{{ url_for('static', filename='uploads/' + user.profile_picture) }}{% elif user.avatar %}{{ url_for('static', filename='avatars/' + user.avatar) }}{% else %}{{ url_for('static', filename='images/default-profile.png') }}{% endif %}"
+             src="{% if user.profile_picture_base64 %}{{ user.profile_picture_base64 }}{% elif user.profile_picture %}{{ url_for('static', filename='uploads/' + user.profile_picture) }}{% elif user.avatar %}{{ url_for('static', filename='avatars/' + user.avatar) }}{% else %}{{ url_for('static', filename='images/default-profile.png') }}{% endif %}"
              alt="Profile Picture">
         <div class="username">{{ user.username }}</div>
         <a href="{{ url_for('dashboard') }}" class="back-btn">Back to Dashboard</a>
@@ -83,7 +83,7 @@
                         <input type="file" name="profile_picture" accept="image/*" onchange="previewProfilePic(this)">
                         <img id="profile-pic-preview"
                              class="profile-pic-preview"
-                             src="{% if user.profile_picture %}{{ url_for('static', filename='uploads/' + user.profile_picture) }}{% elif user.avatar %}{{ url_for('static', filename='avatars/' + user.avatar) }}{% else %}{{ url_for('static', filename='images/default-profile.png') }}{% endif %}"
+                             src="{% if user.profile_picture_base64 %}{{ user.profile_picture_base64 }}{% elif user.profile_picture %}{{ url_for('static', filename='uploads/' + user.profile_picture) }}{% elif user.avatar %}{{ url_for('static', filename='avatars/' + user.avatar) }}{% else %}{{ url_for('static', filename='images/default-profile.png') }}{% endif %}"
                              alt="Profile Picture Preview">
                     </div>
                     <div class="avatar-list-section">
